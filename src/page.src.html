@@ -1,0 +1,448 @@
+<title>Explorador do Eleitorado Brasileiro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one sticky control strip scopes a single column of linked figures; map and scatter share one colour lens. */
+:root {
+  --bg: #eef1f4; --surface: #fbfcfd; --surface-2: #f2f5f8; --ink: #0f1720; --ink-2: #465260; --muted: #75808c;
+  --grid: #e2e6eb; --axis: #bfc7d0; --border: rgba(15, 23, 32, .11);
+  --accent: #0e6e5a; --accent-ink: #ffffff; --accent-wash: rgba(14, 110, 90, .10);
+  --blue: #2a78d6; --red: #e34948; --other: #a9b2bc;
+  --stack-1: #4a3aa7; --stack-2: #1baf7a; --stack-3: #eda100; --stack-4: #e87ba4;
+  --div-n2: #9e2424; --div-n1: #e34948; --div-0: #cfd5db; --div-p1: #3987e5; --div-p2: #104281;
+  --seq-0: #d9ebe5; --seq-1: #0a4a3d; --blue-0: #cde2fb; --blue-1: #0d366b; --red-0: #f8d6d3; --red-1: #8f1f1f;
+  --dot-off: #c5ccd4; --mark: #33414f;
+  --alt-n2: #8a4b08; --alt-n1: #d98b2b; --alt-p1: #1baf7a; --alt-p2: #0a4a3d;
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1116; --surface: #161b21; --surface-2: #1d242c; --ink: #f2f5f8; --ink-2: #b9c2cc; --muted: #8a95a2;
+    --grid: #252d36; --axis: #3a4450; --border: rgba(255, 255, 255, .11);
+    --accent: #3fbf9f; --accent-ink: #06231c; --accent-wash: rgba(63, 191, 159, .14);
+    --blue: #3987e5; --red: #e66767; --other: #5b6672;
+    --stack-1: #9085e9; --stack-2: #199e70; --stack-3: #c98500; --stack-4: #d55181;
+    --div-n2: #ffb3ad; --div-n1: #e66767; --div-0: #434a52; --div-p1: #3987e5; --div-p2: #b7d3f6;
+    --seq-0: #1b3530; --seq-1: #b4efde; --blue-0: #1b2c44; --blue-1: #b7d3f6; --red-0: #402224; --red-1: #ffb3ad;
+    --dot-off: #333c46; --mark: #c6ced7;
+    --alt-n2: #f7c98b; --alt-n1: #d98b2b; --alt-p1: #199e70; --alt-p2: #b4efde;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1116; --surface: #161b21; --surface-2: #1d242c; --ink: #f2f5f8; --ink-2: #b9c2cc; --muted: #8a95a2;
+  --grid: #252d36; --axis: #3a4450; --border: rgba(255, 255, 255, .11);
+  --accent: #3fbf9f; --accent-ink: #06231c; --accent-wash: rgba(63, 191, 159, .14);
+  --blue: #3987e5; --red: #e66767; --other: #5b6672;
+  --stack-1: #9085e9; --stack-2: #199e70; --stack-3: #c98500; --stack-4: #d55181;
+  --div-n2: #ffb3ad; --div-n1: #e66767; --div-0: #434a52; --div-p1: #3987e5; --div-p2: #b7d3f6;
+  --seq-0: #1b3530; --seq-1: #b4efde; --blue-0: #1b2c44; --blue-1: #b7d3f6; --red-0: #402224; --red-1: #ffb3ad;
+  --dot-off: #333c46; --mark: #c6ced7;
+    --alt-n2: #f7c98b; --alt-n1: #d98b2b; --alt-p1: #199e70; --alt-p2: #b4efde;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; line-height: 1.05; }
+h2 { font-size: 21px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 68ch; font-size: 15px; }
+.mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mast { display: flex; flex-direction: column; gap: 8px; }
+.mast .mono { color: var(--accent); }
+
+/* control strip */
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--border);
+  margin-inline: -16px; padding: 8px 16px; display: flex; flex-direction: column; gap: 6px; }
+.crow { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: end; }
+.ctl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ctl > span { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
+.seg button:hover { background: var(--accent-wash); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+select, input[type="search"] { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-height: 32px; max-width: 100%; }
+.ctl.lens { margin-left: auto; }
+.ctl.lens select { border-color: var(--accent); font-weight: 600; }
+.reset { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 6px 10px; min-height: 32px; cursor: pointer; color: var(--ink-2); }
+.reset:hover { background: var(--accent-wash); }
+@media (max-width: 720px) { .ctl.lens { margin-left: 0; } .controls { position: static; } }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.sec-head { display: flex; flex-direction: column; gap: 4px; }
+.sec-head p { color: var(--ink-2); max-width: 78ch; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cols.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 920px) { .cols, .cols.even { grid-template-columns: minmax(0, 1fr); } }
+.fig-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; align-items: baseline; margin-bottom: 10px; }
+.fig-head p { color: var(--muted); font-size: 12.5px; }
+.note { color: var(--muted); font-size: 12.5px; }
+.caveat { border-left: 3px solid var(--accent); background: var(--accent-wash); padding: 8px 12px; border-radius: 0 8px 8px 0; color: var(--ink-2); font-size: 13px; max-width: 86ch; }
+
+/* tally: the boletim-de-urna block */
+.tally { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 920px) { .tally { grid-template-columns: minmax(0, 1fr); } }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.tile { padding: 14px 14px 12px; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); margin: 0 -1px -1px 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tile b { font-size: 24px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+.tile small { color: var(--muted); font-size: 12px; }
+.scope { grid-column: 1 / -1; padding: 8px 14px; background: var(--surface-2); color: var(--ink-2); font-size: 12.5px; }
+.cands { display: flex; flex-direction: column; gap: 7px; }
+.cand { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 58px; gap: 10px; align-items: center; }
+.cand .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cand .nm small { color: var(--muted); }
+.cand .trk { height: 12px; background: var(--surface-2); border-radius: 3px; position: relative; }
+.cand .trk i { position: absolute; inset: 0 auto 0 0; border-radius: 0 3px 3px 0; min-width: 1px; }
+.cand .trk u { position: absolute; top: -3px; bottom: -3px; left: 100%; width: 1px; background: var(--axis); }
+.cand .pc { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* map */
+.mapbox { position: relative; }
+canvas { display: block; max-width: 100%; touch-action: pan-y; }
+.scale { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; max-width: 340px; }
+.scale .bar { height: 10px; border-radius: 3px; }
+.scale .ticks { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rows { display: flex; flex-direction: column; gap: 6px; }
+.tug { display: grid; grid-template-columns: minmax(0, 132px) 40px minmax(0, 1fr) 40px; gap: 8px; align-items: center; border: 0; background: transparent; padding: 3px 4px; border-radius: 6px; cursor: pointer; text-align: left; width: 100%; }
+.tug:hover, .tug[aria-current="true"] { background: var(--accent-wash); }
+.tug .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tug .lab small { display: block; color: var(--muted); font-size: 11.5px; }
+.tug .v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.tug .v.r { text-align: left; }
+.tug .trk { display: flex; gap: 2px; height: 14px; position: relative; }
+.tug .trk i { display: block; height: 100%; }
+.tug .trk i:first-child { border-radius: 3px 0 0 3px; } .tug .trk i:last-of-type { border-radius: 0 3px 3px 0; }
+.tug .trk::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ink); opacity: .55; }
+.key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.key i.ring { border-radius: 50%; background: transparent; border: 2px solid var(--mark); }
+.key i.dot { border-radius: 50%; background: var(--mark); }
+.key i.tick { width: 2px; height: 12px; border-radius: 0; background: var(--ink); }
+.pin { margin-top: 12px; border-top: 1px solid var(--grid); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.pin dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin: 0; }
+.pin dt { color: var(--muted); font-size: 11.5px; } .pin dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pin .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.link { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+/* strips and ranking */
+.strip { display: grid; grid-template-columns: minmax(0, 172px) minmax(0, 1fr) 76px; gap: 10px; align-items: center; min-height: 26px; }
+.strip .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.strip .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.strip .trk { position: relative; height: 22px; border-bottom: 1px solid var(--grid); }
+.strip .trk b { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--dot-off); border: 0; padding: 0; cursor: pointer; }
+.strip .trk b.in { background: var(--mark); opacity: .8; }
+.strip .trk b:hover { outline: 2px solid var(--accent); }
+.strip .trk u { position: absolute; top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: var(--ink); }
+.strip .trk s { position: absolute; top: 50%; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; border-radius: 50%; border: 3px solid var(--accent); background: var(--surface); pointer-events: none; }
+.rank { display: grid; grid-template-columns: minmax(0, 186px) minmax(0, 1fr) 96px; gap: 10px; align-items: center; border: 0; background: transparent; width: 100%; text-align: left; padding: 3px 4px; border-radius: 6px; cursor: pointer; min-height: 28px; }
+.rank:hover, .rank[aria-current="true"] { background: var(--accent-wash); }
+.rank .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .trk { position: relative; height: 20px; }
+.rank .trk::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--grid); }
+.rank .trk::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--axis); }
+.rank .trk em { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--axis); }
+.rank .trk i { position: absolute; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--mark); box-shadow: 0 0 0 2px var(--surface); z-index: 1; }
+.rank .trk i.w { background: var(--surface); border: 2px solid var(--mark); }
+.rank .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-2); font-size: 12.5px; white-space: nowrap; }
+.coef { display: grid; grid-template-columns: minmax(0, 178px) minmax(0, 1fr) 178px; gap: 10px; align-items: center; min-height: 28px; padding: 3px 4px; }
+.coef .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coef .trk { position: relative; height: 14px; }
+.coef .trk::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--axis); }
+.coef .trk i { position: absolute; top: 0; bottom: 0; background: var(--mark); }
+.coef .trk i.pos { border-radius: 0 4px 4px 0; } .coef .trk i.neg { border-radius: 4px 0 0 4px; }
+.coef .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-2); font-size: 12.5px; white-space: nowrap; }
+.axis-row { display: grid; grid-template-columns: minmax(0, 186px) minmax(0, 1fr) 96px; gap: 10px; padding-inline: 4px; color: var(--muted); font-size: 11.5px; }
+.axis-row div { display: flex; justify-content: space-between; }
+
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+svg text { font-family: var(--f-body); }
+.multi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.multi figure { margin: 0; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--grid); border-radius: 8px; padding: 8px; background: transparent; cursor: pointer; text-align: left; }
+.multi figure[aria-current="true"] { border-color: var(--accent); background: var(--accent-wash); }
+.multi figcaption { display: flex; justify-content: space-between; gap: 6px; font-size: 12.5px; }
+.multi figcaption b { font-weight: 600; } .multi figcaption span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.readout { font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+.readout b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* exposure grid */
+.heat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .heat { grid-template-columns: minmax(0, 1fr); } }
+.scroll { overflow-x: auto; }
+table { border-collapse: separate; border-spacing: 2px; width: 100%; font-variant-numeric: tabular-nums; }
+.heat table { table-layout: fixed; min-width: 330px; }
+.heat th { font-weight: 500; color: var(--ink-2); font-size: 12px; padding: 2px 4px; text-align: center; vertical-align: bottom; }
+.heat th.age { text-align: right; white-space: nowrap; width: 54px; }
+.heat td { text-align: center; padding: 5px 2px; border-radius: 3px; font-size: 12px; font-weight: 600; }
+.heat td.thin { opacity: .45; font-weight: 400; }
+.data { border-spacing: 0; }
+.data th, .data td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.data th:first-child, .data td:first-child { text-align: left; }
+.data th { position: sticky; top: 0; background: var(--surface); }
+.data th button { border: 0; background: none; cursor: pointer; font-weight: 600; padding: 0; color: var(--ink-2); }
+.data th button[aria-sort] { color: var(--accent); }
+.data tbody tr { cursor: pointer; } .data tbody tr:hover { background: var(--accent-wash); }
+.tbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 24px; color: var(--ink-2); font-size: 13px; }
+.methods h3 { color: var(--ink); margin-bottom: 4px; }
+
+@media (max-width: 560px) {
+  .rank, .coef, .axis-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lab num" "trk trk"; row-gap: 2px; }
+  .rank .lab, .coef .lab { grid-area: lab; } .rank .num, .coef .num { grid-area: num; } .rank .trk, .coef .trk { grid-area: trk; }
+  .axis-row > span:first-child { display: none; } .axis-row > div { grid-area: trk; } .axis-row > span:last-child { grid-area: num; }
+  .strip { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lab val" "trk trk"; row-gap: 0; }
+  .strip .lab { grid-area: lab; } .strip .val { grid-area: val; } .strip .trk { grid-area: trk; }
+  .tug { grid-template-columns: minmax(0, 104px) 36px minmax(0, 1fr) 36px; gap: 6px; } .tug .lab, .tug .lab small { white-space: normal; }
+  .cand { grid-template-columns: minmax(0, 124px) minmax(0, 1fr) 54px; } .cand .nm { white-space: normal; line-height: 1.2; }
+}
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; max-width: 260px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+#tip b { display: block; font-size: 13px; margin-bottom: 2px; }
+#tip div { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+#tip div span:first-child { opacity: .72; }
+@media (prefers-reduced-motion: no-preference) { .seg button, .tug, .rank { transition: background-color .12s; } }
+
+/* two ways in: a plain-language reading and the full explorer */
+.view { display: flex; flex-direction: column; gap: 22px; }
+.view-switch { align-self: flex-start; margin-top: 6px; padding: 3px; }
+.view-switch button { padding: 8px 16px; font-weight: 600; font-size: 14.5px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px 32px; align-items: center; }
+.card.wide { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 820px) { .card { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; } }
+.card .txt { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card h2 { font-size: 15px; font-weight: 600; color: var(--accent); letter-spacing: 0; }
+.card .big { font-family: var(--f-display); font-size: clamp(19px, 2.3vw, 24px); font-weight: 600; line-height: 1.3; letter-spacing: -.01em; text-wrap: balance; max-width: 30ch; }
+.card.wide .big { max-width: 46ch; }
+.card p { color: var(--ink-2); font-size: 15px; max-width: 62ch; }
+.card p.big { color: var(--ink); }
+.card .how { font-size: 13px; color: var(--muted); }
+.card .more { align-self: flex-start; border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 7px 12px; cursor: pointer; color: var(--ink); font-weight: 500; }
+.card .more:hover { background: var(--accent-wash); }
+.card .vis { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.waffle { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; width: 100%; max-width: 270px; }
+.waffle i { aspect-ratio: 1; border-radius: 2px; }
+.people { display: flex; gap: 5px; }
+.people svg { width: 30px; height: auto; min-width: 0; flex: 0 1 30px; }
+.band { display: flex; flex-direction: column; gap: 5px; }
+.band > span { font-weight: 600; font-size: 13.5px; }
+.band .bar { display: flex; gap: 2px; height: 22px; }
+.band .bar i { display: block; border-radius: 2px; min-width: 2px; }
+.pair { display: flex; flex-direction: column; gap: 4px; padding-block: 8px; border-top: 1px solid var(--grid); }
+.pair h3 { font-size: 14.5px; }
+.tug.plain { cursor: default; grid-template-columns: minmax(0, 250px) 40px minmax(0, 1fr) 40px; }
+.tug.plain:hover { background: transparent; }
+.tug.plain .lab { white-space: normal; }
+@media (max-width: 560px) { .tug.plain { grid-template-columns: minmax(0, 124px) 34px minmax(0, 1fr) 34px; } }
+.warn { border-left: 3px solid var(--accent); background: var(--accent-wash); padding: 10px 14px; border-radius: 0 8px 8px 0; color: var(--ink-2); font-size: 14px; max-width: 80ch; }
+.foot { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+/* section notes: how to read each figure and how it was computed */
+.notes { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.notes summary { cursor: pointer; padding: 9px 14px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.notes .nt { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 28px; padding: 2px 14px 14px; color: var(--ink-2); font-size: 13px; }
+.notes h4 { margin: 0 0 4px; font-family: var(--f-display); font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.strip .trk q { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; transform: rotate(45deg); border: 2px solid var(--ink-2); background: var(--surface); pointer-events: none; quotes: none; }
+.key i.dia { transform: rotate(45deg); background: transparent; border: 2px solid var(--ink-2); width: 8px; height: 8px; border-radius: 0; }
+.tile em { font-style: normal; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <span class="mono">Eleições gerais · 1º turno · Presidente</span>
+    <h1>Explorador do Eleitorado Brasileiro</h1>
+    <p class="lede" id="lede"></p>
+    <div class="seg view-switch" id="f-view" role="group" aria-label="Modo de leitura"></div>
+  </header>
+
+  <div class="controls" id="controls">
+    <div class="crow">
+      <div class="ctl" id="ctl-year"><span>Eleição</span><div class="seg" id="f-year" role="group" aria-label="Eleição"></div></div>
+      <div class="ctl"><span>Região</span><div class="seg" id="f-region" role="group" aria-label="Região"></div></div>
+      <label class="ctl"><span>UF</span><select id="f-uf"></select></label>
+    </div>
+    <div class="crow" id="crow-adv">
+      <label class="ctl"><span>Porte do município</span><select id="f-size"></select></label>
+      <button class="reset" id="f-reset" type="button">Limpar filtros</button>
+      <label class="ctl lens"><span>Cor e eixo vertical mostram</span><select id="f-lens"></select></label>
+    </div>
+  </div>
+
+  <div class="view" id="view-simple"></div>
+
+  <div class="view" id="view-full">
+  <section class="sec" id="resumo">
+    <div class="tally" aria-label="Resumo do resultado">
+      <div class="tiles" id="tiles"></div>
+      <div class="panel"><div class="fig-head"><h3>Votos para presidente</h3><p>% dos votos válidos</p></div><div class="cands" id="cands"></div></div>
+    </div>
+    <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
+      <div><h4>Como ler</h4><ul>
+        <li>Os cinco blocos usam os termos do boletim de urna: eleitorado apto, comparecimento, votos válidos, brancos e nulos.</li>
+        <li>As barras mostram a parcela dos votos válidos de cada candidato. O traço vertical marca 50%, o necessário para vencer no primeiro turno.</li>
+        <li>Com um filtro ativo, tudo passa a se referir apenas aos municípios selecionados.</li>
+      </ul></div>
+      <div><h4>Metodologia</h4><ul>
+        <li>Totais oficiais do TSE, somados a partir dos municípios. Sem filtro, o resumo inclui os eleitores no exterior, para coincidir com o resultado nacional divulgado.</li>
+        <li>Votos válidos são os votos dados a candidatos. Brancos e nulos são calculados sobre o comparecimento; o comparecimento, sobre o eleitorado apto.</li>
+      </ul></div>
+    </div></details>
+  </section>
+
+  <section class="sec" id="map">
+    <div class="sec-head"><h2>Como o voto se distribuiu no território</h2><p>Cada ponto é um município, com área proporcional ao eleitorado. Passe o cursor para ler um município e clique para fixá-lo em toda a página.</p></div>
+    <div class="cols">
+      <div class="panel">
+        <div class="fig-head"><h3 id="map-title"></h3><p id="map-count"></p></div>
+        <div class="mapbox"><canvas id="cv-map" role="img" aria-label="Mapa do Brasil com um ponto por município"></canvas></div>
+        <div class="scale" id="map-scale"></div>
+      </div>
+      <div class="panel">
+        <div class="fig-head"><h3 id="tug-title"></h3><p>clique em uma linha para filtrar</p></div>
+        <div class="key" id="tug-key" style="margin-bottom:8px"></div>
+        <div class="rows" id="tug"></div>
+        <div class="pin" id="big"></div>
+        <div class="pin" id="pin" hidden></div>
+      </div>
+    </div>
+    <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
+      <div><h4>Como ler</h4><ul>
+        <li>A cor segue o indicador escolhido em “Cor e eixo vertical mostram”. Na margem, azul indica vantagem do candidato da família Bolsonaro, vermelho indica vantagem de Lula e cinza indica disputa equilibrada.</li>
+        <li>Pontos grandes são os grandes colégios eleitorais. Um mapa de áreas daria peso visual ao território; aqui o peso é do número de eleitores.</li>
+        <li>As barras à direita mostram cada região (ou cada UF da região escolhida) com o candidato à esquerda, Lula à direita e os demais no centro.</li>
+      </ul></div>
+      <div><h4>Metodologia</h4><ul>
+        <li>Margem = % dos votos válidos do candidato menos % de Lula, em pontos percentuais. A escala de cor satura em ±60 pontos.</li>
+        <li>Cada ponto fica na sede do município (coordenadas do IBGE). A área do ponto é proporcional ao eleitorado apto.</li>
+        <li>Os percentuais por região e UF somam os votos dos municípios; não são médias de percentuais municipais.</li>
+        <li>Nas lentes de mudança, o valor é o de 2026 menos o de 2022 no mesmo município.</li>
+      </ul></div>
+    </div></details>
+  </section>
+
+  <section class="sec" id="voters">
+    <div class="sec-head"><h2>Quem são os eleitores</h2><p>O eleitorado cadastrado da seleção, por sexo e idade, dividido por estado civil ou escolaridade conforme declarado à Justiça Eleitoral.</p></div>
+    <div class="cols">
+      <div class="panel">
+        <div class="fig-head"><h3 id="pyr-title"></h3>
+          <div class="toggles"><div class="seg" id="t-stack" role="group" aria-label="Dividir as barras por"></div><div class="seg" id="t-mode" role="group" aria-label="Comprimento das barras"></div></div>
+        </div>
+        <div class="key" id="pyr-key" style="margin-bottom:6px"></div>
+        <div id="pyr"></div>
+      </div>
+      <div class="panel">
+        <div class="fig-head"><h3>Como a seleção se compara</h3><p>um ponto por UF</p></div>
+        <div class="key" id="strip-key" style="margin-bottom:8px"></div>
+        <div class="rows" id="strips"></div>
+      </div>
+    </div>
+    <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
+      <div><h4>Como ler</h4><ul>
+        <li>Pirâmide: mulheres à esquerda, homens à direita, uma linha por faixa etária. As cores dividem cada barra por estado civil ou escolaridade.</li>
+        <li>“Proporções” estica todas as barras a 100% para comparar a composição entre idades, sem o efeito do tamanho de cada faixa.</li>
+        <li>Comparativo: cada linha é uma característica. Os pontos são as UFs, o traço é o Brasil e o anel é a seleção atual. O losango mostra a mesma seleção na outra eleição.</li>
+      </ul></div>
+      <div><h4>Metodologia</h4><ul>
+        <li>Fonte: perfil do eleitorado do TSE (cadastro eleitoral), somado das zonas eleitorais para os municípios. Descreve todos os eleitores aptos, não apenas quem compareceu.</li>
+        <li>Estado civil e escolaridade são os declarados no alistamento. O TSE alerta que podem estar desatualizados, e por isso tantos eleitores mais velhos ainda aparecem como solteiros.</li>
+        <li>Escolaridade em quatro grupos: sem instrução formal (analfabeto ou lê e escreve), fundamental, médio e superior, cada um incluindo quem não concluiu o nível.</li>
+        <li>A idade média é aproximada pelo ponto médio de cada faixa etária. Eleitores sem sexo, idade, estado civil ou escolaridade informados ficam de fora (menos de 0,1%).</li>
+      </ul></div>
+    </div></details>
+  </section>
+
+  <section class="sec" id="relation">
+    <div class="sec-head"><h2>O perfil do eleitorado acompanha o voto?</h2><p>Cada ponto é um município. Escolha uma característica para o eixo horizontal; a reta é o melhor ajuste, ponderado pelo eleitorado.</p></div>
+    <p class="caveat">São padrões entre lugares, não entre pessoas. Um município com mais eleitores casados pender para um lado não mostra que os casados votaram assim: o voto é secreto, e os lugares diferem em muitas coisas ao mesmo tempo.</p>
+    <div class="cols">
+      <div class="panel">
+        <div class="fig-head"><h3 id="sc-title"></h3><label class="ctl" style="flex-direction:row;align-items:center;gap:8px"><span>Eixo horizontal</span><select id="f-x"></select></label></div>
+        <canvas id="cv-sc" role="img" aria-label="Gráfico de dispersão dos municípios"></canvas>
+        <div class="readout" id="sc-read"></div>
+      </div>
+      <div class="panel">
+        <div class="fig-head"><h3>Quais características mais acompanham</h3><p>clique em uma linha para plotar</p></div>
+        <div class="key" style="margin-bottom:6px"><span><i class="dot"></i>Na seleção</span><span><i class="ring"></i>Dentro das UFs (médias estaduais removidas)</span></div>
+        <div class="axis-row"><span></span><div><span>−1</span><span>0</span><span>+1</span></div><span style="text-align:right">correlação</span></div>
+        <div class="rows" id="rank" style="gap:1px"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="fig-head"><h3>A mesma relação dentro de cada região</h3><p>mesmos eixos do gráfico acima; clique para selecionar a região</p></div>
+      <div class="multi" id="multi"></div>
+    </div>
+    <div class="panel">
+      <div class="fig-head"><h3 id="model-title"></h3><p id="model-fit"></p></div>
+      <div class="cols even">
+        <div class="rows" id="model" style="gap:1px"></div>
+        <div class="note" id="model-note" style="display:flex;flex-direction:column;gap:8px;max-width:60ch"></div>
+      </div>
+    </div>
+    <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
+      <div><h4>Como ler</h4><ul>
+        <li>Dispersão: a correlação vai de −1 a +1. Perto de zero, a característica não acompanha o indicador; perto de ±1, acompanha quase em linha reta.</li>
+        <li>Ranking: o ponto cheio é a correlação na seleção; o anel, a correlação dentro das UFs. Quando os dois se afastam, boa parte da relação é geografia: ela enfraquece quando cada UF é comparada só consigo mesma.</li>
+        <li>Painéis por região: a mesma relação pode ter força ou até sinal diferente dentro de cada região (paradoxo de Simpson).</li>
+        <li>Modelo conjunto: mostra o que resta de cada característica quando as outras são mantidas constantes. Barras maiores indicam associação mais forte.</li>
+      </ul></div>
+      <div><h4>Metodologia</h4><ul>
+        <li>Correlação de Pearson e reta de mínimos quadrados, ambas ponderadas pelo eleitorado de cada município.</li>
+        <li>“Dentro das UFs”: cada variável é centrada na média ponderada da sua UF antes do cálculo (efeitos fixos de UF).</li>
+        <li>Modelo: regressão linear ponderada com efeitos fixos de UF e nove características. Os coeficientes são padronizados (em desvios-padrão) para serem comparáveis; o texto à direita traz o efeito na unidade original.</li>
+        <li>Ficam de fora do modelo, como referência, os solteiros e as faixas intermediárias de idade e escolaridade. Cor ou raça não entra em nenhuma análise: poucos eleitores a têm registrada.</li>
+        <li>Limite central: são dados agregados por município. Nenhuma dessas medidas permite afirmar como um grupo de pessoas votou (falácia ecológica).</li>
+      </ul></div>
+    </div></details>
+  </section>
+
+  <section class="sec" id="groups">
+    <div class="sec-head"><h2>Onde vive cada grupo de eleitores</h2><p id="heat-sub"></p></div>
+    <div class="panel">
+      <div class="fig-head"><h3 id="heat-title"></h3><div class="seg" id="t-heat" role="group" aria-label="Agrupar eleitores por"></div></div>
+      <div class="heat" id="heat"></div>
+      <div class="scale" id="heat-scale"></div>
+    </div>
+    <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
+      <div><h4>Como ler</h4><ul>
+        <li>Cada célula é um grupo de eleitores (sexo, faixa etária e estado civil ou escolaridade). O número é o resultado médio dos municípios onde esse grupo está cadastrado.</li>
+        <li>Exemplo de leitura: “F +5,8” em mulheres casadas de 45 a 49 anos significa que elas vivem, em média, em municípios onde Flávio ficou 5,8 pontos à frente. Não significa que elas votaram assim.</li>
+        <li>Diferenças entre células mostram que os grupos se distribuem de forma desigual pelo território. Células apagadas reúnem menos de 0,2% dos eleitores da seleção.</li>
+      </ul></div>
+      <div><h4>Metodologia</h4><ul>
+        <li>Índice de exposição: para cada grupo, a média do indicador municipal ponderada pelo número de eleitores do grupo em cada município (soma de eleitores × indicador, dividida pelo total de eleitores do grupo).</li>
+        <li>A grade tem escala de cor própria, mais estreita que a do mapa, porque médias de grupos variam muito menos que municípios isolados.</li>
+        <li>O “eleitor médio” citado no texto é a mesma conta para todos os eleitores da seleção; por ponderar pelo eleitorado, pode diferir um pouco do resultado da apuração.</li>
+      </ul></div>
+    </div></details>
+  </section>
+
+  <section class="sec" id="table">
+    <div class="sec-head"><h2>Todos os municípios</h2><p>Os números por trás do mapa e da dispersão. Clique em uma coluna para ordenar e em uma linha para fixar o município.</p></div>
+    <div class="panel">
+      <div class="tbar"><input type="search" id="f-q" placeholder="Buscar município" aria-label="Buscar município"><span class="note" id="tb-count"></span></div>
+      <div class="scroll"><table class="data" id="tb"><thead></thead><tbody></tbody></table></div>
+      <div style="margin-top:10px"><button class="reset" id="tb-more" type="button">Mostrar mais 25</button></div>
+    </div>
+  </section>
+
+  <section class="sec" id="methods">
+    <div class="sec-head"><h2>Fontes e limites</h2></div>
+    <div class="panel methods" id="methods-body"></div>
+  </section>
+  </div>
+  <footer class="foot" id="foot"></footer>
+</div>
+<div id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script id="payload" type="application/json">__DATA__</script>
+<script>
+__APP__
+</script>

@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+tse_cache/
+tse2026_out/
+tse2022_out/
+*.zip
