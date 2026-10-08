@@ -2,6 +2,12 @@
 
 **Um laboratório aberto, não um veredito.** Este painel põe lado a lado o resultado oficial e o perfil do eleitorado dos 5.571 municípios brasileiros, no primeiro turno das eleições presidenciais de 2026 e de 2022, e deixa as conclusões por conta de quem explora.
 
+Página: https://pharmabr.github.io/DataScienceEleitoral2026/
+
+Autores: [PharmaBR](https://github.com/PharmaBR) e [Karina-RM](https://github.com/Karina-RM).
+
+> **Somente primeiro turno.** Todas as figuras e comparações usam o 1º turno: 4 de outubro de 2026 e 2 de outubro de 2022. A mudança entre eleições compara sempre 1º turno com 1º turno. O segundo turno (25 de outubro de 2026 e 30 de outubro de 2022) não entra em nenhum número.
+
 Ele foi feito para provocar quem trabalha com dados a explorar com método: formular uma hipótese, procurar o padrão, tentar derrubá-lo e só então confiar um pouco nele.
 
 ## O que há na página
@@ -19,7 +25,7 @@ O modo de exploração abre com um **roteiro**:
 4. **Controle**: compare cada município com os da própria UF e mantenha as outras características constantes.
 5. **Duvide**: leia os cuidados abaixo e procure o município que contraria a regra.
 
-Seis cartões de investigação preparam o painel para perguntas concretas (geografia ou perfil, diferenças entre regiões, estado civil, sexo, mudança desde 2022 e comparecimento). Os números de cada cartão são calculados na hora, a partir dos dados.
+Seis cartões de investigação preparam o painel para perguntas concretas (geografia ou perfil, diferenças entre regiões, estado civil, sexo, mudança entre os primeiros turnos de 2022 e 2026 e comparecimento). Os números de cada cartão são calculados na hora, a partir dos dados.
 
 ## Antes de concluir
 
@@ -29,7 +35,7 @@ Seis cartões de investigação preparam o painel para perguntas concretas (geog
 4. **Quem procura, acha.** Com tantas características, indicadores e recortes, algumas relações aparentes surgem por coincidência, sobretudo em recortes pequenos. Trate cada achado como hipótese.
 5. **Vizinhos se parecem.** Municípios próximos não são observações independentes. Por isso o painel não mostra valores-p nem intervalos de confiança.
 6. **O cadastro envelhece.** Estado civil e escolaridade são os declarados no alistamento. O perfil descreve todos os eleitores aptos, e não apenas quem compareceu.
-7. **Duas eleições, candidatos diferentes.** Lula concorreu nas duas; o outro candidato mais votado foi Jair Bolsonaro em 2022 e Flávio Bolsonaro em 2026. Tudo é primeiro turno.
+7. **Duas eleições, candidatos diferentes.** Lula concorreu nas duas; o outro candidato mais votado foi Jair Bolsonaro em 2022 e Flávio Bolsonaro em 2026. Tudo é primeiro turno comparado com primeiro turno.
 8. **Modelos simplificam, e os pesos concentram.** As retas e a regressão supõem relações lineares. Como cada município pesa conforme o seu eleitorado, poucas cidades grandes dominam as contas.
 
 ## Independência
@@ -51,11 +57,11 @@ A página não usa cookies nem ferramentas de medição de audiência. Guarda ap
 
 O resumo está em [NOTICE.md](NOTICE.md) e os textos das licenças, em [src/vendor/NOTICES.txt](src/vendor/NOTICES.txt). Esses textos também viajam dentro do `index.html`.
 
-**Este projeto**: o código está sob a licença [MIT](LICENSE). Os textos e as figuras do painel estão sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt-br): podem ser reutilizados com indicação da fonte. Os dados seguem as licenças das suas fontes.
+**Este projeto**, de PharmaBR e Karina-RM: o código está sob a licença [MIT](LICENSE). Os textos e as figuras do painel estão sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.pt-br): podem ser reutilizados com indicação da fonte. Os dados seguem as licenças das suas fontes.
 
 ### Como citar
 
-> PharmaBR. Explorador do Eleitorado Brasileiro: primeiro turno das eleições presidenciais de 2022 e 2026. 2026. Dados: Tribunal Superior Eleitoral (TSE). Disponível em: https://pharmabr.github.io/explorador-eleitorado/.
+> PharmaBR; Karina-RM. Explorador do Eleitorado Brasileiro: primeiro turno das eleições presidenciais de 2022 e 2026. 2026. Dados: Tribunal Superior Eleitoral (TSE). Disponível em: https://pharmabr.github.io/DataScienceEleitoral2026/.
 
 ## Como publicar
 
@@ -71,6 +77,8 @@ O resumo está em [NOTICE.md](NOTICE.md) e os textos das licenças, em [src/vend
    ```
 
    Os dois scripts conferem os totais com os números oficiais do TSE e gravam um diagnóstico dentro do zip.
+
+   O script de 2026 lê a eleição 6257 (1º turno). O de 2022 grava os dois turnos em arquivos separados (`resultado_*.csv` para o 1º turno e `resultado_*_t2.csv` para o 2º); a montagem da página lê apenas os arquivos do 1º turno.
 
 2. **Referências geográficas**: o `municipios.csv` de kelvins/municipios-brasileiros em uma pasta de referência e os 27 arquivos `geojs-<código da UF>-mun.json` de tbrugz/geodata-br em outra.
 

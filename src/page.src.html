@@ -85,6 +85,7 @@ select, input[type="search"] { background: var(--surface); border: 1px solid var
 .fig-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; align-items: baseline; margin-bottom: 10px; }
 .fig-head p { color: var(--muted); font-size: 12.5px; }
 .note { color: var(--muted); font-size: 12.5px; }
+.caveat b { color: var(--ink); }
 .caveat { border-left: 3px solid var(--accent); background: var(--accent-wash); padding: 8px 12px; border-radius: 0 8px 8px 0; color: var(--ink-2); font-size: 13px; max-width: 86ch; }
 
 /* tally: the boletim-de-urna block */
@@ -298,15 +299,16 @@ a { color: var(--accent); text-underline-offset: 2px; }
 
 <div class="wrap">
   <header class="mast">
-    <span class="mono">Eleições gerais · 1º turno · Presidente</span>
+    <span class="mono">Eleições gerais · Presidente · somente 1º turno</span>
     <h1>Explorador do Eleitorado Brasileiro</h1>
     <p class="lede" id="lede"></p>
+    <p class="caveat" id="round-note"></p>
     <div class="seg view-switch" id="f-view" role="group" aria-label="Modo de leitura"></div>
   </header>
 
   <div class="controls" id="controls">
     <div class="crow">
-      <div class="ctl" id="ctl-year"><span>Eleição</span><div class="seg" id="f-year" role="group" aria-label="Eleição"></div></div>
+      <div class="ctl" id="ctl-year"><span>Eleição (sempre 1º turno)</span><div class="seg" id="f-year" role="group" aria-label="Eleição"></div></div>
       <div class="ctl"><span>Região</span><div class="seg" id="f-region" role="group" aria-label="Região"></div></div>
       <label class="ctl"><span>UF</span><select id="f-uf"></select></label>
     </div>
@@ -336,10 +338,11 @@ a { color: var(--accent); text-underline-offset: 2px; }
   <section class="sec" id="resumo">
     <div class="tally" aria-label="Resumo do resultado">
       <div class="tiles" id="tiles"></div>
-      <div class="panel"><div class="fig-head"><h3>Votos para presidente</h3><p>% dos votos válidos</p></div><div class="cands" id="cands"></div></div>
+      <div class="panel"><div class="fig-head"><h3 id="cands-title">Votos para presidente</h3><p>% dos votos válidos</p></div><div class="cands" id="cands"></div></div>
     </div>
     <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
       <div><h4>Como ler</h4><ul>
+        <li>Tudo é primeiro turno. A linha menor em cada bloco traz o mesmo número no primeiro turno da outra eleição.</li>
         <li>Os cinco blocos usam os termos do boletim de urna: eleitorado apto, comparecimento, votos válidos, brancos e nulos.</li>
         <li>As barras mostram a parcela dos votos válidos de cada candidato. O traço vertical marca 50%: vence no primeiro turno quem passa dessa marca no total nacional.</li>
         <li>Com um filtro ativo, tudo passa a se referir apenas aos municípios selecionados.</li>
@@ -377,7 +380,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
         <li>Margem = % dos votos válidos do candidato do PL (Flávio Bolsonaro em 2026, Jair Bolsonaro em 2022) menos % de Lula, em pontos percentuais. A escala de cor satura em ±60 pontos.</li>
         <li>Cada ponto fica na sede do município (coordenadas da base municipios-brasileiros). O raio do ponto é proporcional à raiz quadrada do eleitorado apto, mais um tamanho mínimo para que os municípios pequenos continuem visíveis; por isso eles aparecem um pouco maiores do que seu peso real. Os contornos das UFs vêm da malha municipal do IBGE, agregada por UF e simplificada; a projeção é a de Mercator.</li>
         <li>Os percentuais por região e UF somam os votos dos municípios; não são médias de percentuais municipais.</li>
-        <li>Nos indicadores de mudança, o valor é o de 2026 menos o de 2022 no mesmo município.</li>
+        <li>Nos indicadores de mudança, o valor é o do 1º turno de 2026 menos o do 1º turno de 2022 no mesmo município. O segundo turno não entra em nenhuma conta.</li>
       </ul></div>
     </div></details>
   </section>

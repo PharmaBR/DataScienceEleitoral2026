@@ -4,6 +4,9 @@
   const P = JSON.parse(document.getElementById('payload').textContent);
   const N = P.n, D = P.dims, M = P.mun, A = D.age.length, KM = D.km, KS = D.ks;
   const YEARS = P.meta.years, HAS22 = YEARS.indexOf('2022') >= 0;
+  // every result on the page is a first round; the runoffs are never read
+  const ROUND = { '2026': { first: '4 de outubro de 2026', runoff: '25 de outubro de 2026' }, '2022': { first: '2 de outubro de 2022', runoff: '30 de outubro de 2022' } };
+  const T1 = yr => '1º turno de ' + yr, PAIR = '1º turno de 2022 → 1º turno de 2026';
   const SITE = (() => { try { return JSON.parse(document.getElementById('site').textContent) || {}; } catch (e) { return {}; } })();
   const $ = id => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -136,8 +139,8 @@
       case 'third': return { label: 'Votação dos outros candidatos', unit: '% dos votos válidos', kind: 'seq' };
       case 'turnout': return { label: 'Comparecimento', unit: '% do eleitorado', kind: 'seq' };
       case 'bn': return { label: 'Brancos e nulos', unit: '% do comparecimento', kind: 'seq' };
-      case 'swing': return { label: 'Mudança da margem, 2022 → 2026', unit: 'pontos percentuais', kind: 'div', change: true };
-      default: return { label: 'Mudança do comparecimento, 2022 → 2026', unit: 'pontos percentuais', kind: 'alt', change: true };
+      case 'swing': return { label: 'Mudança da margem, ' + PAIR, unit: 'pontos percentuais', kind: 'div', change: true };
+      default: return { label: 'Mudança do comparecimento, ' + PAIR, unit: 'pontos percentuais', kind: 'alt', change: true };
     }
   }
   const signed = key => key === 'margin' || key === 'swing' || key === 'dturn';
@@ -247,9 +250,9 @@
   const munTitle = i => M.name[i] + ' · ' + D.ufs[UF[i]];
   function munRows(i, extra) {
     const c = cur(), F = c.F;
-    const rows = [['Eleição', c.yr], ['Eleitorado', fInt(c.U.el[i])], ['Comparecimento', fmtLens('turnout', F.turnout[i])], [c.cand.a.name, fmtLens('a', F.a[i])],
+    const rows = [['Eleição', T1(c.yr)], ['Eleitorado', fInt(c.U.el[i])], ['Comparecimento', fmtLens('turnout', F.turnout[i])], [c.cand.a.name, fmtLens('a', F.a[i])],
       ['Lula', fmtLens('lu', F.lu[i])], ['Margem', fmtLens('margin', F.margin[i])]];
-    if (HAS22) rows.push(['Mudança desde 2022', fmtLens('swing', FX.swing[i])]);
+    if (HAS22) rows.push(['Mudança entre os 1ºs turnos', fmtLens('swing', FX.swing[i])]);
     return extra ? rows.concat(extra) : rows;
   }
 
@@ -267,7 +270,7 @@
     $('ctl-year').hidden = !HAS22;
     seg($('f-view'), [['simple', 'Leitura rápida'], ['full', 'Explorar os dados']], () => S.view, v => { setView(v, null, true); });
     $('view-simple').hidden = S.view !== 'simple'; $('view-full').hidden = S.view !== 'full'; $('crow-adv').hidden = S.view !== 'full';
-    seg($('f-year'), YEARS.map(y => [y, y]), () => S.year, v => { S.year = v; });
+    seg($('f-year'), YEARS.map(y => [y, '1º turno ' + y]), () => S.year, v => { S.year = v; });
     seg($('f-region'), [[-1, 'Todas']].concat(REG_NAME.map((n, i) => [i, n])), () => S.region, v => { S.region = v; if (S.uf >= 0 && UF_REG[S.uf] !== v) S.uf = -1; });
     const uf = $('f-uf'); uf.replaceChildren(option('-1', S.region >= 0 ? 'Todas as UFs: ' + REG_NAME[S.region] : 'Todas as UFs'));
     D.ufs.map((u, i) => i).filter(i => S.region < 0 || UF_REG[i] === S.region).sort((a, b) => D.uf_name[a].localeCompare(D.uf_name[b], 'pt'))
@@ -280,6 +283,14 @@
     seg($('t-heat'), [['marital', 'Estado civil'], ['school', 'Escolaridade']], () => S.heat, v => { S.heat = v; });
     $('lede').textContent = 'Quem são os eleitores do Brasil, município por município, e como cada lugar votou para presidente no primeiro turno de 2026' + (HAS22 ? ' e de 2022' : '') +
       '. Um painel para investigar: escolha um recorte, levante uma hipótese e veja se os dados a sustentam.';
+    renderRound();
+  }
+  function renderRound() {   // said once, at the top of both views, so no figure can be read as a runoff
+    const note = $('round-note'), yrs = YEARS.slice().sort().reverse();
+    note.replaceChildren(el('b', null, 'Somente primeiro turno. '), document.createTextNode(
+      'Todas as figuras e comparações usam o 1º turno: ' + yrs.map(y => ROUND[y].first).join(' e ') + '. ' +
+      (yrs.length > 1 ? 'A mudança entre eleições compara sempre 1º turno com 1º turno. ' : '') +
+      'O segundo turno (' + yrs.map(y => ROUND[y].runoff).join(' e ') + ') não entra em nenhum número desta página.'));
   }
   function initControls() {
     for (const [v, l] of SIZES) $('f-size').append(option(v, l));
@@ -298,15 +309,16 @@
     const all = !filtered(), tot = c => all ? Object.assign({}, c.meta.national, c.meta.national.cands) : SEL[c.yr];
     const c = cur(), g = tot(c), o = other(), h = o ? tot(o) : null;
     const tiles = $('tiles'); tiles.replaceChildren();
-    const tile = (code, value, sub, before) => { const t = el('div', 'tile'); t.append(el('span', 'mono', code), el('b', null, value), el('small', null, sub)); if (o && before) t.append(el('em', null, o.yr + ': ' + before)); tiles.append(t); };
+    const tile = (code, value, sub, before) => { const t = el('div', 'tile'); t.append(el('span', 'mono', code), el('b', null, value), el('small', null, sub)); if (o && before) t.append(el('em', null, '1º turno ' + o.yr + ': ' + before)); tiles.append(t); };
     tile('Eleitorado apto', compact(g.el), 'eleitores aptos', h && compact(h.el));
     tile('Comparecimento', f1(pc(g.comp, g.el)) + '%', compact(g.comp) + ' compareceram', h && f1(pc(h.comp, h.el)) + '%');
     tile('Votos válidos', compact(g.valid), f1(pc(g.valid, g.comp)) + '% do comparecimento', h && compact(h.valid));
     tile('Brancos', f1(pc(g.blank, g.comp)) + '%', compact(g.blank) + ' votos em branco', h && f1(pc(h.blank, h.comp)) + '%');
     tile('Nulos', f1(pc(g.nul, g.comp)) + '%', compact(g.nul) + ' votos nulos', h && f1(pc(h.nul, h.comp)) + '%');
-    tiles.append(el('div', 'scope', 'Eleição de ' + c.yr + ' · ' + (all
+    tiles.append(el('div', 'scope', 'Primeiro turno de ' + c.yr + ' · ' + (all
       ? 'Brasil inteiro, incluindo ' + fInt(c.meta.abroad.el) + ' eleitores no exterior. As figuras abaixo cobrem os ' + fInt(N) + ' municípios.'
       : selName() + ' · ' + fInt(NSEL) + ' municípios')));
+    $('cands-title').textContent = 'Votos para presidente · ' + T1(c.yr);
     const box = $('cands'); box.replaceChildren();
     const votes = c.cands.map(k => [k.key, k.name, g[k.key], k.party]);
     votes.sort((p, q) => q[2] - p[2]);
@@ -398,7 +410,7 @@
   function renderMap() {
     MAPPTS = drawMap($('cv-map'), S.lens);
     const L = lens(S.lens), sc = lensScale(S.lens);
-    $('map-title').textContent = L.label + ' por município' + (L.change ? '' : ' · ' + S.year);
+    $('map-title').textContent = L.label + ' por município' + (L.change ? '' : ' · ' + T1(S.year));
     $('map-count').textContent = (NSEL === N ? fInt(N) : fInt(NSEL) + ' de ' + fInt(N)) + ' municípios · pontos maiores = mais eleitores';
     drawScale($('map-scale'), sc, L.kind === 'div' || L.kind === 'alt' ? scaleEnds(S.lens, S.lens === 'margin' ? 60 : CHG[S.lens]) : [f1(DOM[S.lens][0]) + '%', L.unit, f1(DOM[S.lens][1]) + '%']);
   }
@@ -430,7 +442,7 @@
   }
   function renderTug() {
     const c = cur(), bd = breakdown(), zoom = bd.zoom, rows = bd.rows, node = $('tug'); node.replaceChildren();
-    $('tug-title').textContent = (zoom ? 'UFs da região ' + REG_NAME[S.region] : 'Por região') + ' · ' + c.yr;
+    $('tug-title').textContent = (zoom ? 'UFs da região ' + REG_NAME[S.region] : 'Por região') + ' · ' + T1(c.yr);
     const key = $('tug-key'); key.replaceChildren();
     [[c.cand.a.name, 'var(--blue)'], ['Outros', 'var(--other)'], ['Lula', 'var(--red)']].forEach(([t, col]) => { const s = el('span'), i = el('i'); i.style.background = col; s.append(i, document.createTextNode(t)); key.append(s); });
     for (const r of rows) {
@@ -451,11 +463,11 @@
     const node = $('pin'); node.hidden = S.pin < 0; if (S.pin < 0) return;
     const i = S.pin, c = cur(), F = c.F, top = el('div', 'top'), un = el('button', 'link', 'Desafixar'); un.type = 'button';
     un.addEventListener('click', () => { S.pin = -1; update(); });
-    top.append(el('h3', null, munTitle(i) + ' · ' + c.yr), un);
+    top.append(el('h3', null, munTitle(i) + ' · ' + T1(c.yr)), un);
     const dl = el('dl'), items = [['Eleitorado', fInt(c.U.el[i])], ['Comparecimento', fmtLens('turnout', F.turnout[i])], [c.cand.a.name, fmtLens('a', F.a[i])], ['Lula', fmtLens('lu', F.lu[i])],
       ['Margem', fmtLens('margin', F.margin[i])], ['Mulheres', fmtFeat('women', F.women[i])], ['Idade média', fmtFeat('age', F.age[i])], ['Casados', fmtFeat('married', F.married[i])],
       ['Ensino superior', fmtFeat('higher', F.higher[i])]];
-    if (HAS22) items.splice(5, 0, ['Margem em ' + other().yr, fmtLens('margin', other().F.margin[i], other().yr)], ['Mudança da margem', fmtLens('swing', FX.swing[i])]);
+    if (HAS22) items.splice(5, 0, ['Margem no ' + T1(other().yr), fmtLens('margin', other().F.margin[i], other().yr)], ['Mudança entre os 1ºs turnos', fmtLens('swing', FX.swing[i])]);
     items.forEach(([k, v]) => { const d = el('div'); d.append(el('dt', null, k), el('dd', null, v)); dl.append(d); });
     node.replaceChildren(top, dl);
   }
@@ -466,7 +478,7 @@
     const info = S.stack === 'marital' ? MARITAL : SCHOOL, K = S.stack === 'marital' ? KM : KS, g = S.stack === 'marital' ? SEL[S.year].cm : SEL[S.year].cs;
     const key = $('pyr-key'); key.replaceChildren();
     info.labels.forEach((l, k) => { const s = el('span'), sw = el('i'); sw.style.background = 'var(--stack-' + (k + 1) + ')'; s.append(sw, document.createTextNode(l)); key.append(s); });
-    $('pyr-title').textContent = 'Eleitores por sexo, idade e ' + info.name + ' · ' + selName() + ' · ' + S.year;
+    $('pyr-title').textContent = 'Eleitores por sexo, idade e ' + info.name + ' · ' + selName() + ' · eleitorado de ' + S.year;
     const gut = 52, rowH = 19, gap = 4, top = 22, bottom = 26, side = 18, half = (W - gut) / 2, H = top + A * (rowH + gap) + bottom;
     const tot = [new Float64Array(A), new Float64Array(A)]; let grand = 0;
     for (let s = 0; s < 2; s++) for (let a = 0; a < A; a++) for (let k = 0; k < K; k++) { tot[s][a] += g[(s * A + a) * K + k]; grand += g[(s * A + a) * K + k]; }
@@ -510,7 +522,7 @@
     const key = $('strip-key'); key.replaceChildren();
     const item = (cls, text, style) => { const s = el('span'), i = el('i', cls); if (style) i.style.cssText = style; s.append(i, document.createTextNode(text)); key.append(s); };
     item('ring', 'Seleção atual', 'border-color:var(--accent)'); item('tick', 'Brasil'); item('dot', 'UFs da seleção'); item('dot', 'Outras UFs', 'background:var(--dot-off)');
-    if (o) item('dia', 'Mesma seleção em ' + o.yr);
+    if (o) item('dia', 'Mesma seleção no ' + T1(o.yr));
     for (const k of STRIPS) {
       const vals = c.STATEM.map(m => m[k]), pool = vals.concat([c.BRM[k], SELM[c.yr][k]]).concat(o ? [SELM[o.yr][k]] : []).filter(isFinite);
       const ext = d3.extent(pool), pad = (ext[1] - ext[0]) * 0.07 || 1;
@@ -518,7 +530,7 @@
       const row = el('div', 'strip'), trk = el('div', 'trk');
       vals.forEach((v, u) => {
         const dot = el('b', (S.uf >= 0 ? u === S.uf : S.region >= 0 ? UF_REG[u] === S.region : true) ? 'in' : ''); dot.style.left = sc(v) + '%'; dot.tabIndex = 0; dot.setAttribute('role', 'button'); dot.setAttribute('aria-label', D.uf_name[u] + ' ' + fmtAny(k, v));
-        bindTip(dot, () => [D.uf_name[u] + ' · ' + c.yr, [[SLABEL(k), fmtAny(k, v)], ['Brasil', fmtAny(k, c.BRM[k])]].concat(o ? [[D.uf_name[u] + ' em ' + o.yr, FLABEL[k] ? fmtFeat(k, o.STATEM[u][k]) : fmtLens(k, o.STATEM[u][k], o.yr)]] : [])]);
+        bindTip(dot, () => [D.uf_name[u] + ' · ' + T1(c.yr), [[SLABEL(k), fmtAny(k, v)], ['Brasil', fmtAny(k, c.BRM[k])]].concat(o ? [[D.uf_name[u] + ' no ' + T1(o.yr), FLABEL[k] ? fmtFeat(k, o.STATEM[u][k]) : fmtLens(k, o.STATEM[u][k], o.yr)]] : [])]);
         const go = () => { S.uf = u; S.region = UF_REG[u]; update(); };
         dot.addEventListener('click', go); dot.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
         trk.append(dot);
@@ -529,7 +541,7 @@
       row.append(el('span', 'lab', SLABEL(k)), trk, el('span', 'val', fmtAny(k, SELM[c.yr][k])));
       node.append(row);
     }
-    node.append(el('p', 'note', 'Cada linha tem escala própria. Os pontos das UFs mostram sempre a UF inteira, na eleição de ' + c.yr + '.'));
+    node.append(el('p', 'note', 'Cada linha tem escala própria. Os pontos das UFs mostram sempre a UF inteira, no primeiro turno de ' + c.yr + '.'));
   }
 
   // ---------------------------------------------------------------- scatter
@@ -575,7 +587,7 @@
     const cv = $('cv-sc'), w = cv.parentElement.clientWidth; if (!w) return;
     const out = plot(cv, w, Math.round(Math.min(520, Math.max(300, w * 0.82))), MASK, false);
     SCPTS = { tree: tree(out.px, out.py, i => MASK[i] === 1) };
-    $('sc-title').textContent = lens(S.lens).label + ' e ' + XPHRASE[S.x] + ' · ' + S.year;
+    $('sc-title').textContent = lens(S.lens).label + ' e ' + XPHRASE[S.x] + (lens(S.lens).change ? '' : ' · ' + T1(S.year));
     const st = out.st, wi = wstats(cur().F[S.x], V(S.lens), MASK, true), read = $('sc-read'); read.replaceChildren();
     const add = (label, value) => { const s = el('span', null, label + ' '); s.append(el('b', null, value)); read.append(s); };
     add('Correlação', fmtR(st.r)); if (S.uf < 0) add('Dentro das UFs', fmtR(wi.r));
@@ -645,7 +657,7 @@
   }
   function renderModel() {
     const node = $('model'), note = $('model-note'); node.replaceChildren(); note.replaceChildren();
-    $('model-title').textContent = 'Mantendo as demais características constantes · ' + selName() + ' · ' + S.year;
+    $('model-title').textContent = 'Mantendo as demais características constantes · ' + selName() + ' · ' + (lens(S.lens).change ? PAIR : T1(S.year));
     const m = fitModel(MODEL, V(S.lens), MASK), partisan = S.lens === 'margin' || S.lens === 'swing';
     if (!m) { $('model-fit').textContent = ''; node.append(el('p', 'note', 'Há poucos municípios nesta seleção para ajustar o modelo.')); return; }
     $('model-fit').textContent = 'explica ' + Math.round(m.r2 * 100) + '% da variação ' + (S.uf < 0 ? 'dentro das UFs' : 'na UF') + ' · ' + fInt(m.n) + ' municípios';
@@ -665,7 +677,7 @@
     note.append(
       el('p', null, 'Uma única regressão ponderada com as nove características ao mesmo tempo, comparando cada município apenas com os da mesma UF. O comprimento da barra é o coeficiente padronizado, o que permite comparar características medidas em escalas diferentes.'),
       el('p', null, S.lens === 'margin' ? 'Barras azuis: mais da característica acompanha margem maior de ' + who + ', com o resto igual. Barras vermelhas: margem maior de Lula.'
-        : S.lens === 'swing' ? 'Barras azuis: mais da característica acompanha um movimento maior rumo a ' + who + ' desde 2022, com o resto igual. Barras vermelhas: rumo a Lula.'
+        : S.lens === 'swing' ? 'Barras azuis: mais da característica acompanha um movimento maior rumo a ' + who + ' entre os primeiros turnos de 2022 e 2026, com o resto igual. Barras vermelhas: rumo a Lula.'
           : 'Barras para a direita: mais da característica acompanha um valor mais alto, com o resto igual.'),
       el('p', null, 'Ficam de fora, de propósito, os solteiros e as faixas intermediárias de idade e escolaridade: são a referência contra a qual cada proporção é lida.'));
   }
@@ -708,7 +720,7 @@
       }
       tb.append(head, body); wrap.append(tb); node.append(wrap);
     }
-    $('heat-title').textContent = L.label + ': média dos municípios onde cada grupo está cadastrado · ' + selName() + (L.change ? '' : ' · ' + S.year);
+    $('heat-title').textContent = L.label + ': média dos municípios onde cada grupo está cadastrado · ' + selName() + (L.change ? '' : ' · ' + T1(S.year));
     const a = cur().cand.a.short;
     const phrase = v => S.lens === 'margin' ? (v > 0 ? a : 'Lula') + ' ficou ' + f1(Math.abs(v)) + pts(v) + ' à frente'
       : S.lens === 'swing' ? 'a margem se moveu ' + f1(Math.abs(v)) + pts(v) + ' na direção de ' + (v > 0 ? short26() : 'Lula')
@@ -745,8 +757,8 @@
       tr.addEventListener('click', () => { S.pin = i; update(); $('map').scrollIntoView({ behavior: 'smooth' }); });
       body.append(tr);
     }
-    $('tb-count').textContent = fInt(Math.min(S.rows, idx.length)) + ' de ' + fInt(idx.length) + ' municípios · ' + selName() + ' · ' + c.yr +
-      (HAS22 ? ' · Δ margem: mudança desde 2022 (' + short26()[0] + ' ou L indica a direção)' : '');
+    $('tb-count').textContent = fInt(Math.min(S.rows, idx.length)) + ' de ' + fInt(idx.length) + ' municípios · ' + selName() + ' · ' + T1(c.yr) +
+      (HAS22 ? ' · Δ margem: mudança entre os 1ºs turnos de 2022 e 2026 (' + short26()[0] + ' ou L indica a direção)' : '');
     $('tb-more').hidden = idx.length <= S.rows;
   }
 
@@ -795,14 +807,14 @@
 
   function renderSimple() {
     const root = $('view-simple'), c = cur(), a = c.cand.a, g = totals(c.yr), where = inPlace(); root.replaceChildren();
-    root.append(el('p', 'lede', 'Um resumo em linguagem simples da eleição de ' + c.yr + ' ' + where + '. Para ver todos os gráficos e números, escolha “Explorar os dados” no alto da página.'));
+    root.append(el('p', 'lede', 'Um resumo em linguagem simples do primeiro turno da eleição de ' + c.yr + ' ' + where + '. Para ver todos os gráficos e números, escolha “Explorar os dados” no alto da página.'));
 
     // who came first
     const [nA, nO, nL] = per100([g.a, g.valid - g.a - g.lu, g.lu]), margin = pc(g.a - g.lu, g.valid), lead = margin >= 0 ? a.name : 'Lula';
-    let k = card('Quem ficou na frente?');
+    let k = card('Quem ficou na frente no primeiro turno?');
     k.big('De cada 100 votos válidos ' + where + ', ' + nA + ' foram para ' + a.name + ', ' + nL + ' para Lula e ' + nO + ' para os outros candidatos.');
     if (!filtered()) k.p(Math.max(pc(g.a, g.valid), pc(g.lu, g.valid)) > 50 ? lead + ' passou da metade dos votos válidos e venceu no primeiro turno.'
-      : 'Para vencer no primeiro turno é preciso ter mais da metade dos votos válidos. Como ninguém chegou lá, a decisão ficou para o segundo turno.');
+      : 'Para vencer no primeiro turno é preciso ter mais da metade dos votos válidos. Como ninguém chegou lá, a decisão ficou para o segundo turno, que não faz parte desta página.');
     else k.p(Math.abs(margin) < 0.5 ? 'Aqui os dois ficaram praticamente empatados.' : lead + ' ficou na frente aqui, com ' + nPts(margin) + ' de vantagem.');
     k.how('Votos válidos são os votos dados a algum candidato. Brancos e nulos não entram nessa conta.');
     k.more('Ver o resultado completo', 'resumo');
@@ -814,7 +826,7 @@
     // turnout
     const turnout = pc(g.comp, g.el), ten = Math.round(turnout / 10), bn = pc(g.blank + g.nul, g.comp);
     k = card('Quantos foram votar?');
-    k.big('De cada 10 eleitores ' + where + ', ' + ten + ' foram votar e ' + (10 - ten) + ' não ' + (10 - ten === 1 ? 'foi' : 'foram') + '.');
+    k.big('De cada 10 eleitores ' + where + ', ' + ten + ' foram votar no primeiro turno e ' + (10 - ten) + ' não ' + (10 - ten === 1 ? 'foi' : 'foram') + '.');
     k.p('Foram às urnas ' + qty(g.comp, 'pessoas') + ', de um total de ' + qty(g.el, 'eleitores') + ' (' + Math.round(turnout) + ' de cada 100).');
     k.p('Entre os que foram, ' + Math.round(bn) + ' de cada 100 votaram em branco ou anularam o voto.');
     k.more('Ver o comparecimento em detalhe', 'map', () => { S.lens = 'turnout'; });
@@ -851,14 +863,14 @@
       const g22 = totals('2022'), g26 = totals('2026'), m22 = pc(g22.a - g22.lu, g22.valid), m26 = pc(g26.a - g26.lu, g26.valid), d = m26 - m22;
       const a22 = Y['2022'].cand.a, a26 = Y['2026'].cand.a, say = (m, cand) => Math.abs(m) < 0.5 ? cand.name + ' e Lula ficaram praticamente empatados' : (m > 0 ? cand.name + ' ficou ' + nPts(m) + ' à frente de Lula' : 'Lula ficou ' + nPts(m) + ' à frente de ' + cand.name);
       let same = 0, n = 0; for (let i = 0; i < N; i++) if (MASK[i] && isFinite(FX.swing[i])) { n++; if (FX.swing[i] * d > 0) same++; }
-      k = card('O que mudou desde 2022?', true);
-      k.big('Em 2022, ' + say(m22, a22) + ' ' + where + '. Em 2026, ' + say(m26, a26) + '.');
+      k = card('O que mudou desde o primeiro turno de 2022?', true);
+      k.big('No primeiro turno de 2022, ' + say(m22, a22) + ' ' + where + '. No primeiro turno de 2026, ' + say(m26, a26) + '.');
       k.p(Math.abs(d) < 0.5 ? 'Ou seja: a disputa quase não mudou de tamanho.' : 'Ou seja: a disputa se moveu ' + nPts(d) + ' na direção de ' + (d > 0 ? a26.name : 'Lula') + '. Isso aconteceu em ' + Math.round(pc(same, n)) + ' de cada 100 municípios.');
       const rows = el('div', 'rows');
       rows.append(keyRow([[a22.party === a26.party ? 'Candidato do ' + a26.party : a22.name + ' / ' + a26.name, 'var(--blue)'], ['Outros', 'var(--other)'], ['Lula', 'var(--red)']]),
-        plainRow('2022', a22.name + ' × Lula', g22, a22.name), plainRow('2026', a26.name + ' × Lula', g26, a26.name));
+        plainRow('1º turno de 2022', a22.name + ' × Lula', g22, a22.name), plainRow('1º turno de 2026', a26.name + ' × Lula', g26, a26.name));
       k.txt.append(rows);
-      k.how('Os números são a parcela dos votos válidos no primeiro turno. Lula concorreu nas duas eleições; o outro candidato mais votado mudou: ' + a22.name + ' em 2022 e ' + a26.name + ' em 2026.');
+      k.how('Primeiro turno comparado com primeiro turno: os números são a parcela dos votos válidos em cada um. Lula concorreu nas duas eleições; o outro candidato mais votado mudou: ' + a22.name + ' em 2022 e ' + a26.name + ' em 2026.');
       k.more('Ver a mudança no mapa', 'map', () => { S.lens = 'swing'; });
       root.append(k.node);
     }
@@ -966,10 +978,10 @@
         if (m22[i] < 0 && F.margin[i] > 0) { toA++; elA += U.el[i]; } else if (m22[i] > 0 && F.margin[i] < 0) { toL++; elL += U.el[i]; } else if (m22[i] > 0 && F.margin[i] > 0) keepA++; else if (m22[i] < 0 && F.margin[i] < 0) keepL++;
       }
       const who = a22.party === a.party ? 'o candidato do ' + a.party : a22.name + ' e depois ' + a.name, share = v => v > 0 ? ' (' + f1(pc(v, elT)) + '% do eleitorado)' : '';
-      out.push({ tag: 'Mudança no tempo', title: 'Onde a liderança mudou entre 2022 e 2026?', set: { lens: 'swing' }, anchor: 'map',
-        text: 'Dos ' + fInt(n) + ' municípios com resultado nas duas eleições, Lula ficou à frente nas duas em *' + fInt(keepL) + '* e ' + who + ', em *' + fInt(keepA) + '*. A liderança passou de Lula para ' + a.name + ' em *' + cnt(toA) + '*' + share(elA) +
+      out.push({ tag: 'Mudança no tempo', title: 'Onde a liderança mudou entre os primeiros turnos?', set: { lens: 'swing' }, anchor: 'map',
+        text: 'Dos ' + fInt(n) + ' municípios com resultado no 1º turno de 2022 e no de 2026, Lula ficou à frente nos dois em *' + fInt(keepL) + '* e ' + who + ', em *' + fInt(keepA) + '*. A liderança passou de Lula para ' + a.name + ' em *' + cnt(toA) + '*' + share(elA) +
           ' e de ' + a22.name + ' para Lula em *' + cnt(toL) + '*' + share(elL) + '.',
-        test: 'Teste: a mudança acompanha as mesmas características que a margem? Lembre que são primeiros turnos com candidatos diferentes.' });
+        test: 'Teste: a mudança acompanha as mesmas características que a margem? Lembre que são dois primeiros turnos, com candidatos diferentes.' });
     }
 
     const turn = both(F.turnout).sort((p, q) => Math.abs(q.r) - Math.abs(p.r))[0], ufT = y.STATEM.map((m, u) => ({ u, v: m.turnout })), tLo = d3.least(ufT, d => d.v), tHi = d3.greatest(ufT, d => d.v);
@@ -1016,7 +1028,7 @@
       ['Quem procura, acha.', 'São ' + FEATS.length + ' características, ' + (VOTE_KEYS.length + CHANGE_KEYS.length) + ' indicadores, ' + YEARS.length + ' eleições e dezenas de recortes. Com tantas combinações, algumas relações aparentes surgem por coincidência, sobretudo em recortes pequenos. Trate cada achado como hipótese e tente derrubá-lo em outro recorte' + (HAS22 ? ' ou na outra eleição.' : '.')],
       ['Vizinhos se parecem.', 'Municípios próximos não são observações independentes. Por isso o painel não mostra valores-p nem intervalos de confiança: calculados da forma usual, pareceriam mais seguros do que são.'],
       ['O cadastro envelhece.', 'Estado civil e escolaridade são os declarados no alistamento e podem estar desatualizados. O perfil descreve todos os eleitores aptos, e não apenas quem compareceu.'],
-      HAS22 ? ['Duas eleições, candidatos diferentes.', 'Lula concorreu nas duas; o outro candidato mais votado foi ' + Y['2022'].cand.a.name + ' em 2022 e ' + Y['2026'].cand.a.name + ' em 2026. Parte da mudança pode vir da troca de candidato, e não do eleitorado. E tudo aqui é primeiro turno, com um conjunto diferente de concorrentes em cada ano.']
+      HAS22 ? ['Duas eleições, candidatos diferentes.', 'Lula concorreu nas duas; o outro candidato mais votado foi ' + Y['2022'].cand.a.name + ' em 2022 e ' + Y['2026'].cand.a.name + ' em 2026. Parte da mudança pode vir da troca de candidato, e não do eleitorado. E tudo aqui é primeiro turno comparado com primeiro turno, com um conjunto diferente de concorrentes em cada ano. Nada aqui descreve nem antecipa um segundo turno.']
         : ['Um turno, uma eleição.', 'Tudo aqui é o primeiro turno de uma única eleição, com os concorrentes daquele ano.'],
       ['Modelos simplificam, e os pesos concentram.', 'As retas e a regressão supõem relações lineares: curvas, limiares e interações ficam de fora. Como cada município pesa conforme o seu eleitorado, poucas cidades grandes dominam as contas: as 100 maiores somam ' + Math.round(top100) + '% do peso. Em UFs concentradas na capital, o número reflete quase só a capital contra o resto.']]
       .forEach(([title, text]) => { const li = el('li'); li.append(el('b', null, title), el('span', null, text)); cautions.append(li); });
@@ -1027,7 +1039,7 @@
       (y22 ? ' 2022: dados abertos do TSE (votação nominal e detalhe da apuração por município e zona), na versão do arquivo gerada pelo TSE em ' + y22.result_date + '.' : ''));
     item('Perfil do eleitorado', 'Dados abertos do TSE, perfil do eleitorado, agregado por município a partir das zonas eleitorais. Extração de ' + y26.profile_date + ' para 2026' + (y22 ? ' e de ' + y22.profile_date + ' para 2022' : '') + '.');
     item('O que fica de fora', 'Eleitores sem sexo, idade, estado civil ou escolaridade informados (menos de 0,1%). Votos no exterior entram apenas no resumo nacional. Cor ou raça não é analisada: só ' + f1(y26.race_declared) + '% dos eleitores a têm registrada em 2026.');
-    if (y22) item('Comparação entre 2022 e 2026', 'Os municípios são pareados pelo código do TSE. Município criado depois de 2022 fica sem valor naquele ano. A mudança da margem compara o candidato do PL em cada eleição (Jair Bolsonaro em 2022, Flávio Bolsonaro em 2026) com Lula.');
+    if (y22) item('Comparação entre os primeiros turnos', 'Toda comparação entre 2022 e 2026 é de primeiro turno com primeiro turno; o segundo turno não é usado em nenhum dos dois anos. Os municípios são pareados pelo código do TSE. Município criado depois de 2022 fica sem valor naquele ano. A mudança da margem compara o candidato do PL em cada eleição (Jair Bolsonaro em 2022, Flávio Bolsonaro em 2026) com Lula.');
     item('Como ler as relações', 'Correlações, retas e o modelo ponderam cada município pelo seu eleitorado. Comparam lugares, e por isso não permitem dizer como um grupo de pessoas votou.');
     item('Atualização', 'Os números refletem os arquivos do TSE nas datas indicadas. Retotalizações e decisões judiciais posteriores podem alterar os totais oficiais. Em caso de divergência, vale o que o TSE publica.');
 
@@ -1047,7 +1059,7 @@
     $('privacy').textContent = 'Privacidade: a página não usa cookies nem ferramentas de medição de audiência. Guarda apenas, no seu navegador, duas preferências de exibição. Os dados são contagens por município, como publicadas pelo TSE, sem nomes nem registros individuais. ' +
       'As únicas requisições externas são as das tipografias, feitas aos servidores do Google Fonts, que recebem o endereço IP e a identificação do navegador de quem abre a página, assim como o serviço que a hospeda.';
     const now = new Date(), month = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'][now.getMonth()], span = YEARS.slice().sort().join(' e ');
-    $('cite').textContent = (SITE.author ? SITE.author + '. ' : '') + 'Explorador do Eleitorado Brasileiro: primeiro turno das eleições presidenciais de ' + span + '. ' + YEARS.slice().sort().pop() + '. Dados: Tribunal Superior Eleitoral (TSE).' +
+    $('cite').textContent = (SITE.author ? SITE.author.replace(' e ', '; ') + '. ' : '') + 'Explorador do Eleitorado Brasileiro: primeiro turno das eleições presidenciais de ' + span + '. ' + YEARS.slice().sort().pop() + '. Dados: Tribunal Superior Eleitoral (TSE).' +
       (SITE.site ? ' Disponível em: ' + SITE.site + '.' : '') + ' Acesso em: ' + now.getDate() + ' ' + month + ' ' + now.getFullYear() + '.';
   }
   function renderFoot() {
