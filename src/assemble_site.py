@@ -5,7 +5,8 @@ from pathlib import Path
 page = Path(sys.argv[1]).read_text(encoding="utf-8")
 cut = page.index("</style>") + len("</style>")
 head, body = page[:cut], page[cut:]
-DESCRIPTION = "Como cada município brasileiro votou para presidente em 2026 e 2022, e quem são seus eleitores: sexo, idade, estado civil e escolaridade."
+DESCRIPTION = ("Como cada município brasileiro votou para presidente em 2026 e 2022 e quem são seus eleitores: sexo, idade, "
+               "estado civil e escolaridade. Um painel independente para explorar, com método, os dados oficiais do TSE.")
 html = f"""<!doctype html>
 <html lang="pt-BR">
 <head>

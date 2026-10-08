@@ -252,6 +252,48 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
 .strip .trk q { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; transform: rotate(45deg); border: 2px solid var(--ink-2); background: var(--surface); pointer-events: none; quotes: none; }
 .key i.dia { transform: rotate(45deg); background: transparent; border: 2px solid var(--ink-2); width: 8px; height: 8px; border-radius: 0; }
 .tile em { font-style: normal; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* the invitation: purpose, a method in five steps and six questions that set the page up */
+a { color: var(--accent); text-underline-offset: 2px; }
+.roteiro { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.roteiro > summary { cursor: pointer; padding: 11px 18px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.roteiro .in { display: flex; flex-direction: column; gap: 18px; padding: 4px 18px 20px; }
+.invite { display: flex; flex-direction: column; gap: 8px; }
+.invite h2 { font-size: clamp(21px, 2.6vw, 27px); font-weight: 800; line-height: 1.12; }
+.invite p { color: var(--ink-2); font-size: 15px; max-width: 74ch; }
+.method { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; counter-reset: step; }
+.method li { counter-increment: step; padding: 12px 14px 13px; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); margin: 0 -1px -1px 0; display: flex; flex-direction: column; gap: 3px; background: var(--surface-2); min-width: 0; }
+.method li::before { content: "0" counter(step); font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; color: var(--accent); }
+.method b { font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+.method span { color: var(--ink-2); font-size: 13px; }
+.method .link { align-self: flex-start; margin-top: 2px; font-size: 13px; }
+.quests { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.quest { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 7px; min-width: 0; background: var(--surface); }
+.quest h3 { font-size: 17px; font-weight: 700; line-height: 1.2; }
+.quest p { color: var(--ink-2); font-size: 13.5px; }
+.quest p b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.quest .try { color: var(--muted); font-size: 12.5px; }
+.quest .go { margin-top: auto; align-self: flex-start; border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
+.quest .go:hover { background: var(--accent); color: var(--accent-ink); }
+.cautions { margin: 0; padding: 0; list-style: none; counter-reset: c; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 12px 28px; }
+.cautions li { counter-increment: c; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 2px 8px; align-content: start; color: var(--ink-2); font-size: 13.5px; }
+.cautions li::before { content: counter(c); grid-row: 1 / span 2; font-family: var(--f-display); font-weight: 800; font-size: 20px; line-height: 1.1; color: var(--accent); }
+.cautions b { color: var(--ink); font-family: var(--f-display); font-size: 14.5px; font-weight: 600; }
+.credits { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr) minmax(0, 250px); gap: 0; font-size: 13px; margin: 0; }
+.credits > div { display: contents; }
+.credits dt, .credits dd { margin: 0; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--grid); color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+.credits dt { color: var(--ink); font-weight: 600; }
+.credits dd.lic { font-family: var(--f-mono); font-size: 11.5px; padding-right: 0; }
+@media (max-width: 720px) { .credits { grid-template-columns: minmax(0, 1fr); } .credits dt { border-bottom: 0; padding-bottom: 0; } .credits dd { border-bottom: 0; padding-block: 2px; } .credits dd.lic { border-bottom: 1px solid var(--grid); padding-bottom: 9px; } }
+.panel.stack { display: flex; flex-direction: column; gap: 12px; }
+.panel.stack > p { color: var(--ink-2); max-width: 86ch; }
+.cite { font-family: var(--f-mono); font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--ink); overflow-wrap: anywhere; user-select: all; }
+.foot { display: flex; flex-direction: column; gap: 4px; }
+.legal { margin: 0; padding: 4px 14px 14px; font-family: var(--f-mono); font-size: 11.5px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow-y: auto; }
+/* anchors land below the sticky control strip */
+.sec, .sec-head, .roteiro, #regioes { scroll-margin-top: 140px; }
+@media (max-width: 720px) { .sec, .sec-head, .roteiro, #regioes { scroll-margin-top: 10px; } }
+.foot .link { font-size: inherit; }
 </style>
 
 <div class="wrap">
@@ -278,6 +320,19 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
   <div class="view" id="view-simple"></div>
 
   <div class="view" id="view-full">
+  <details class="roteiro" id="roteiro" open>
+    <summary>Roteiro de exploração</summary>
+    <div class="in">
+      <div class="invite">
+        <h2>Um laboratório aberto, não um veredito</h2>
+        <p id="invite-text"></p>
+      </div>
+      <ol class="method" id="method" aria-label="Um método em cinco passos"></ol>
+      <div class="sec-head"><h2 id="quests-title"></h2><p>Cada cartão prepara o painel (indicador, eixo e filtros) e leva você à figura certa. Os números são calculados na hora, a partir dos dados, para o país inteiro.</p></div>
+      <div class="quests" id="quests"></div>
+    </div>
+  </details>
+
   <section class="sec" id="resumo">
     <div class="tally" aria-label="Resumo do resultado">
       <div class="tiles" id="tiles"></div>
@@ -286,7 +341,7 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
     <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
       <div><h4>Como ler</h4><ul>
         <li>Os cinco blocos usam os termos do boletim de urna: eleitorado apto, comparecimento, votos válidos, brancos e nulos.</li>
-        <li>As barras mostram a parcela dos votos válidos de cada candidato. O traço vertical marca 50%, o necessário para vencer no primeiro turno.</li>
+        <li>As barras mostram a parcela dos votos válidos de cada candidato. O traço vertical marca 50%: vence no primeiro turno quem passa dessa marca no total nacional.</li>
         <li>Com um filtro ativo, tudo passa a se referir apenas aos municípios selecionados.</li>
       </ul></div>
       <div><h4>Metodologia</h4><ul>
@@ -297,7 +352,7 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
   </section>
 
   <section class="sec" id="map">
-    <div class="sec-head"><h2>Como o voto se distribuiu no território</h2><p>Cada ponto é um município, com área proporcional ao eleitorado. Passe o cursor para ler um município e clique para fixá-lo em toda a página.</p></div>
+    <div class="sec-head"><h2>Como o voto se distribuiu no território</h2><p>Cada ponto é um município, e o tamanho do ponto cresce com o eleitorado. Passe o cursor para ler um município e clique para fixá-lo em toda a página.</p></div>
     <div class="cols">
       <div class="panel">
         <div class="fig-head"><h3 id="map-title"></h3><p id="map-count"></p></div>
@@ -314,15 +369,15 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
     </div>
     <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
       <div><h4>Como ler</h4><ul>
-        <li>A cor segue o indicador escolhido em “Cor e eixo vertical mostram”. Na margem, azul indica vantagem do candidato da família Bolsonaro, vermelho indica vantagem de Lula e cinza indica disputa equilibrada.</li>
-        <li>Pontos grandes são os grandes colégios eleitorais. Um mapa de áreas daria peso visual ao território; aqui o peso é do número de eleitores.</li>
-        <li>As barras à direita mostram cada região (ou cada UF da região escolhida) com o candidato à esquerda, Lula à direita e os demais no centro.</li>
+        <li>A cor segue o indicador escolhido em “Cor e eixo vertical mostram”. Na margem, azul indica vantagem do candidato do PL (Jair Bolsonaro em 2022, Flávio Bolsonaro em 2026), vermelho indica vantagem de Lula e cinza indica disputa equilibrada. As cores são convenção visual, e não posição.</li>
+        <li>Pontos grandes são os grandes colégios eleitorais. Um mapa de áreas daria peso visual ao território; aqui o peso visual acompanha o número de eleitores.</li>
+        <li>As barras à direita mostram cada região (ou cada UF da região escolhida) com o candidato do PL no lado esquerdo da barra, Lula no lado direito e os demais no centro.</li>
       </ul></div>
       <div><h4>Metodologia</h4><ul>
-        <li>Margem = % dos votos válidos do candidato menos % de Lula, em pontos percentuais. A escala de cor satura em ±60 pontos.</li>
-        <li>Cada ponto fica na sede do município (coordenadas do IBGE). A área do ponto é proporcional ao eleitorado apto.</li>
+        <li>Margem = % dos votos válidos do candidato do PL (Flávio Bolsonaro em 2026, Jair Bolsonaro em 2022) menos % de Lula, em pontos percentuais. A escala de cor satura em ±60 pontos.</li>
+        <li>Cada ponto fica na sede do município (coordenadas da base municipios-brasileiros). O raio do ponto é proporcional à raiz quadrada do eleitorado apto, mais um tamanho mínimo para que os municípios pequenos continuem visíveis; por isso eles aparecem um pouco maiores do que seu peso real. Os contornos das UFs vêm da malha municipal do IBGE, agregada por UF e simplificada; a projeção é a de Mercator.</li>
         <li>Os percentuais por região e UF somam os votos dos municípios; não são médias de percentuais municipais.</li>
-        <li>Nas lentes de mudança, o valor é o de 2026 menos o de 2022 no mesmo município.</li>
+        <li>Nos indicadores de mudança, o valor é o de 2026 menos o de 2022 no mesmo município.</li>
       </ul></div>
     </div></details>
   </section>
@@ -350,8 +405,8 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
         <li>Comparativo: cada linha é uma característica. Os pontos são as UFs, o traço é o Brasil e o anel é a seleção atual. O losango mostra a mesma seleção na outra eleição.</li>
       </ul></div>
       <div><h4>Metodologia</h4><ul>
-        <li>Fonte: perfil do eleitorado do TSE (cadastro eleitoral), somado das zonas eleitorais para os municípios. Descreve todos os eleitores aptos, não apenas quem compareceu.</li>
-        <li>Estado civil e escolaridade são os declarados no alistamento. O TSE alerta que podem estar desatualizados, e por isso tantos eleitores mais velhos ainda aparecem como solteiros.</li>
+        <li>Fonte: perfil do eleitorado do TSE (cadastro eleitoral), agregado por município a partir das zonas eleitorais. Descreve todos os eleitores aptos, não apenas quem compareceu.</li>
+        <li>Estado civil e escolaridade são os declarados no alistamento ou na última atualização do cadastro. O TSE alerta que podem estar desatualizados, o que ajuda a explicar por que tantos eleitores mais velhos ainda aparecem como solteiros.</li>
         <li>Escolaridade em quatro grupos: sem instrução formal (analfabeto ou lê e escreve), fundamental, médio e superior, cada um incluindo quem não concluiu o nível.</li>
         <li>A idade média é aproximada pelo ponto médio de cada faixa etária. Eleitores sem sexo, idade, estado civil ou escolaridade informados ficam de fora (menos de 0,1%).</li>
       </ul></div>
@@ -360,7 +415,7 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
 
   <section class="sec" id="relation">
     <div class="sec-head"><h2>O perfil do eleitorado acompanha o voto?</h2><p>Cada ponto é um município. Escolha uma característica para o eixo horizontal; a reta é o melhor ajuste, ponderado pelo eleitorado.</p></div>
-    <p class="caveat">São padrões entre lugares, não entre pessoas. Um município com mais eleitores casados pender para um lado não mostra que os casados votaram assim: o voto é secreto, e os lugares diferem em muitas coisas ao mesmo tempo.</p>
+    <p class="caveat">São padrões entre lugares, não entre pessoas. O fato de um município com mais eleitores casados pender para um lado não mostra que os casados votaram assim: o voto é secreto, e os lugares diferem em muitas coisas ao mesmo tempo.</p>
     <div class="cols">
       <div class="panel">
         <div class="fig-head"><h3 id="sc-title"></h3><label class="ctl" style="flex-direction:row;align-items:center;gap:8px"><span>Eixo horizontal</span><select id="f-x"></select></label></div>
@@ -374,7 +429,7 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
         <div class="rows" id="rank" style="gap:1px"></div>
       </div>
     </div>
-    <div class="panel">
+    <div class="panel" id="regioes">
       <div class="fig-head"><h3>A mesma relação dentro de cada região</h3><p>mesmos eixos do gráfico acima; clique para selecionar a região</p></div>
       <div class="multi" id="multi"></div>
     </div>
@@ -387,16 +442,16 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
     </div>
     <details class="notes" open><summary>Notas desta seção</summary><div class="nt">
       <div><h4>Como ler</h4><ul>
-        <li>Dispersão: a correlação vai de −1 a +1. Perto de zero, a característica não acompanha o indicador; perto de ±1, acompanha quase em linha reta.</li>
-        <li>Ranking: o ponto cheio é a correlação na seleção; o anel, a correlação dentro das UFs. Quando os dois se afastam, boa parte da relação é geografia: ela enfraquece quando cada UF é comparada só consigo mesma.</li>
-        <li>Painéis por região: a mesma relação pode ter força ou até sinal diferente dentro de cada região (paradoxo de Simpson).</li>
-        <li>Modelo conjunto: mostra o que resta de cada característica quando as outras são mantidas constantes. Barras maiores indicam associação mais forte.</li>
+        <li>Dispersão: a correlação vai de −1 a +1. Perto de zero, a característica não acompanha o indicador em linha reta (ainda pode haver uma relação curva); perto de ±1, acompanha quase em linha reta.</li>
+        <li>Ranking: o ponto cheio é a correlação na seleção; o anel, a correlação dentro das UFs. Quando os dois se afastam, a geografia pesa: a relação muda (enfraquece, se fortalece ou troca de sinal) quando cada município é comparado só com os da própria UF.</li>
+        <li>Painéis por região: a mesma relação pode ter força ou até sinal diferente em cada região, e o número do país inteiro pode esconder isso. Quando o agregado chega a inverter o sinal dos subgrupos, é o paradoxo de Simpson.</li>
+        <li>Modelo conjunto: mostra o que resta de cada característica quando as outras são mantidas constantes. Barras maiores indicam associação mais forte, e não efeito causal.</li>
       </ul></div>
       <div><h4>Metodologia</h4><ul>
         <li>Correlação de Pearson e reta de mínimos quadrados, ambas ponderadas pelo eleitorado de cada município.</li>
         <li>“Dentro das UFs”: cada variável é centrada na média ponderada da sua UF antes do cálculo (efeitos fixos de UF).</li>
-        <li>Modelo: regressão linear ponderada com efeitos fixos de UF e nove características. Os coeficientes são padronizados (em desvios-padrão) para serem comparáveis; o texto à direita traz o efeito na unidade original.</li>
-        <li>Ficam de fora do modelo, como referência, os solteiros e as faixas intermediárias de idade e escolaridade. Cor ou raça não entra em nenhuma análise: poucos eleitores a têm registrada.</li>
+        <li>Modelo: regressão linear ponderada com efeitos fixos de UF e nove características. Os coeficientes são padronizados (em desvios-padrão medidos dentro das UFs) para serem comparáveis; o texto à direita traz o coeficiente na unidade original.</li>
+        <li>Ficam de fora do modelo, como referência, os solteiros e as faixas intermediárias de idade e escolaridade. A idade média e o cadastro biométrico também não entram. Como as proporções somam 100%, as características restantes ainda se sobrepõem em parte, e os coeficientes devem ser lidos em conjunto. Cor ou raça não entra em nenhuma análise: poucos eleitores a têm registrada.</li>
         <li>Limite central: são dados agregados por município. Nenhuma dessas medidas permite afirmar como um grupo de pessoas votou (falácia ecológica).</li>
       </ul></div>
     </div></details>
@@ -433,15 +488,31 @@ table { border-collapse: separate; border-spacing: 2px; width: 100%; font-varian
   </section>
 
   <section class="sec" id="methods">
-    <div class="sec-head"><h2>Fontes e limites</h2></div>
+    <div class="sec-head"><h2>Antes de concluir</h2><p>Oito cuidados para ler qualquer figura deste painel. Vale a regra do bom experimento: um achado só merece confiança depois de sobreviver às tentativas de derrubá-lo.</p></div>
+    <div class="panel"><ol class="cautions" id="cautions"></ol></div>
+    <div class="sec-head" id="fontes"><h2>Fontes e método</h2></div>
     <div class="panel methods" id="methods-body"></div>
+    <div class="sec-head" id="creditos"><h2>Créditos e licenças</h2><p>Tudo o que esta página usa, de onde vem e sob quais termos pode ser reutilizado.</p></div>
+    <div class="panel stack">
+      <dl class="credits" id="credits"></dl>
+      <p id="independence"></p>
+      <p id="privacy"></p>
+      <div><h3 style="margin-bottom:6px">Como citar</h3><p class="cite" id="cite"></p></div>
+      <details class="notes"><summary>Textos das licenças de terceiros</summary><pre class="legal" id="notices-text"></pre></details>
+    </div>
   </section>
   </div>
   <footer class="foot" id="foot"></footer>
 </div>
 <div id="tip" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+__D3__
+</script>
+<script id="notices" type="text/plain">
+__NOTICES__
+</script>
+<script id="site" type="application/json">__SITE__</script>
 <script id="payload" type="application/json">__DATA__</script>
 <script>
 __APP__

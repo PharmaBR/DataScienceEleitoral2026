@@ -78,6 +78,14 @@ def read(path):
         yield from csv.DictReader(handle)
 
 
+def latest(stamps):
+    """The most recent of TSE's dd/mm/yyyy[ hh:mm:ss] stamps, as written."""
+    def moment(stamp):
+        day, _, clock = stamp.partition(" ")
+        return tuple(reversed(day.split("/"))) + (clock,)
+    return max((s for s in stamps if s), key=moment, default="")
+
+
 def state_shapes(path, tolerance=0.04):
     shapes = []
     for feature in json.load(open(path, encoding="utf-8"))["features"]:
@@ -192,7 +200,7 @@ def year_block(bundle, index, year):
     bundle_meta = json.load(open(bundle / "meta.json", encoding="utf-8"))
     meta = {
         "profile_date": bundle_meta["perfil"]["gerado_em"],
-        "result_date": max(row["gerado_em"] for row in results),
+        "result_date": latest(row["gerado_em"] for row in results),
         "national": {"el": total(results, "eleitorado"), "comp": total(results, "comparecimento"),
                      "valid": total(results, "votos_validos"), "blank": total(results, "votos_brancos"),
                      "nul": total(results, "votos_nulos"),

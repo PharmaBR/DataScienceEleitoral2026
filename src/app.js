@@ -4,6 +4,7 @@
   const P = JSON.parse(document.getElementById('payload').textContent);
   const N = P.n, D = P.dims, M = P.mun, A = D.age.length, KM = D.km, KS = D.ks;
   const YEARS = P.meta.years, HAS22 = YEARS.indexOf('2022') >= 0;
+  const SITE = (() => { try { return JSON.parse(document.getElementById('site').textContent) || {}; } catch (e) { return {}; } })();
   const $ = id => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const svg = (tag, attrs) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
@@ -182,8 +183,8 @@
   }
 
   // ---------------------------------------------------------------- statistics
-  function wstats(x, y, mask, within) {
-    const w = cur().U.el; let sw = 0, sx = 0, sy = 0, n = 0;
+  function wstats(x, y, mask, within, weights) {
+    const w = weights || cur().U.el; let sw = 0, sx = 0, sy = 0, n = 0;
     const gw = new Float64Array(NUF), gx = new Float64Array(NUF), gy = new Float64Array(NUF);
     for (let i = 0; i < N; i++) {
       if (!mask[i] || !isFinite(x[i]) || !isFinite(y[i])) continue;
@@ -278,7 +279,7 @@
     seg($('t-mode'), [['count', 'Eleitores'], ['share', 'Proporções']], () => S.mode, v => { S.mode = v; });
     seg($('t-heat'), [['marital', 'Estado civil'], ['school', 'Escolaridade']], () => S.heat, v => { S.heat = v; });
     $('lede').textContent = 'Quem são os eleitores do Brasil, município por município, e como cada lugar votou para presidente no primeiro turno de 2026' + (HAS22 ? ' e de 2022' : '') +
-      '. Escolha uma região, uma UF ou um porte de município e todas as figuras acompanham.';
+      '. Um painel para investigar: escolha um recorte, levante uma hipótese e veja se os dados a sustentam.';
   }
   function initControls() {
     for (const [v, l] of SIZES) $('f-size').append(option(v, l));
@@ -308,6 +309,7 @@
       : selName() + ' · ' + fInt(NSEL) + ' municípios')));
     const box = $('cands'); box.replaceChildren();
     const votes = c.cands.map(k => [k.key, k.name, g[k.key], k.party]);
+    votes.sort((p, q) => q[2] - p[2]);
     votes.push(['oth', 'Outros candidatos', g.valid - d3.sum(votes, d => d[2]), '']);
     for (const [k, name, v, party] of votes) {
       const share = pc(v, g.valid), row = el('div', 'cand'), nm = el('span', 'nm', name + ' ');
@@ -321,7 +323,7 @@
       bindTip(row, () => [name, [['Votos', fInt(v)], ['% dos votos válidos', f2(share) + '%']]]);
       box.append(row);
     }
-    box.append(el('p', 'note', 'O traço marca 50%, o necessário para vencer no primeiro turno.'));
+    box.append(el('p', 'note', 'O traço marca 50%: vence no primeiro turno quem passa dessa marca no total nacional.'));
   }
 
   // ---------------------------------------------------------------- canvas helpers
@@ -397,7 +399,7 @@
     MAPPTS = drawMap($('cv-map'), S.lens);
     const L = lens(S.lens), sc = lensScale(S.lens);
     $('map-title').textContent = L.label + ' por município' + (L.change ? '' : ' · ' + S.year);
-    $('map-count').textContent = (NSEL === N ? fInt(N) : fInt(NSEL) + ' de ' + fInt(N)) + ' municípios · área do ponto = eleitorado';
+    $('map-count').textContent = (NSEL === N ? fInt(N) : fInt(NSEL) + ' de ' + fInt(N)) + ' municípios · pontos maiores = mais eleitores';
     drawScale($('map-scale'), sc, L.kind === 'div' || L.kind === 'alt' ? scaleEnds(S.lens, S.lens === 'margin' ? 60 : CHG[S.lens]) : [f1(DOM[S.lens][0]) + '%', L.unit, f1(DOM[S.lens][1]) + '%']);
   }
 
@@ -568,7 +570,7 @@
     return { st, px, py };
   }
   const effect = slope => S.lens === 'margin' ? f2(Math.abs(slope)) + ' p.p. a mais para ' + (slope >= 0 ? cur().cand.a.short : 'Lula')
-    : S.lens === 'swing' ? f2(Math.abs(slope)) + ' p.p. a mais rumo a ' + (slope >= 0 ? short26() : 'Lula') : sign(slope) + f2(Math.abs(slope)) + ' p.p.';
+    : S.lens === 'swing' ? f2(Math.abs(slope)) + ' p.p. a mais rumo a ' + (slope >= 0 ? short26() : 'Lula') : sign(slope) + f2(Math.abs(slope)) + ' p.p.' + ({ a: ' na votação de ' + cur().cand.a.short, lu: ' na votação de Lula', third: ' na votação dos outros candidatos', turnout: ' de comparecimento', bn: ' de brancos e nulos', dturn: ' na mudança do comparecimento' })[S.lens];
   function renderScatter() {
     const cv = $('cv-sc'), w = cv.parentElement.clientWidth; if (!w) return;
     const out = plot(cv, w, Math.round(Math.min(520, Math.max(300, w * 0.82))), MASK, false);
@@ -656,12 +658,12 @@
       const per = r.k === 'size' ? 'por 10× eleitores' : 'por ponto', value = sign(r.raw) + f2(Math.abs(r.raw)) + ' p.p. ' + per;
       row.append(el('span', 'lab', FLABEL[r.k]), trk, el('span', 'num', value));
       row.tabIndex = 0;
-      bindTip(row, () => [FLABEL[r.k], [['Efeito padronizado', fmtR(r.b)], ['Na unidade original', value]]]);
+      bindTip(row, () => [FLABEL[r.k], [['Coeficiente padronizado', fmtR(r.b)], ['Na unidade original', value]]]);
       node.append(row);
     });
     const who = S.lens === 'swing' ? short26() : cur().cand.a.short;
     note.append(
-      el('p', null, 'Uma única regressão ponderada com as nove características ao mesmo tempo, comparando cada município apenas com os da mesma UF. O comprimento da barra é o efeito padronizado, o que permite comparar características medidas em escalas diferentes.'),
+      el('p', null, 'Uma única regressão ponderada com as nove características ao mesmo tempo, comparando cada município apenas com os da mesma UF. O comprimento da barra é o coeficiente padronizado, o que permite comparar características medidas em escalas diferentes.'),
       el('p', null, S.lens === 'margin' ? 'Barras azuis: mais da característica acompanha margem maior de ' + who + ', com o resto igual. Barras vermelhas: margem maior de Lula.'
         : S.lens === 'swing' ? 'Barras azuis: mais da característica acompanha um movimento maior rumo a ' + who + ' desde 2022, com o resto igual. Barras vermelhas: rumo a Lula.'
           : 'Barras para a direita: mais da característica acompanha um valor mais alto, com o resto igual.'),
@@ -827,8 +829,8 @@
     // where each one was stronger
     const bd = breakdown(), parts = bd.rows.slice(1), wonA = parts.filter(r => r.g.a > r.g.lu).map(r => r.label), wonL = parts.filter(r => r.g.lu > r.g.a).map(r => r.label);
     const list = names => names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] : names[0];
-    let mA = 0, mL = 0, eA = 0, eT = 0;
-    for (let i = 0; i < N; i++) if (MASK[i] && c.U.valid[i] > 0) { eT += c.U.el[i]; if (c.U.a[i] > c.U.lu[i]) { mA++; eA += c.U.el[i]; } else if (c.U.lu[i] > c.U.a[i]) mL++; }
+    let mA = 0, mL = 0, eA = 0, eL = 0, eT = 0;
+    for (let i = 0; i < N; i++) if (MASK[i] && c.U.valid[i] > 0) { eT += c.U.el[i]; if (c.U.a[i] > c.U.lu[i]) { mA++; eA += c.U.el[i]; } else if (c.U.lu[i] > c.U.a[i]) { mL++; eL += c.U.el[i]; } }
     k = card('Onde cada um foi mais forte?');
     if (S.uf < 0) {
       const masc = S.region >= 0 && S.region !== 2, unit = S.region < 0 ? '5 regiões' : S.region === 2 ? '4 unidades da região (3 estados e o Distrito Federal)' : parts.length + ' estados da região';
@@ -838,7 +840,7 @@
       if (wonL.length) k.p('Lula na frente: ' + list(wonL) + '.');
     } else k.big(a.short + ' teve mais votos que Lula em ' + fInt(mA) + ' municípios ' + where + '; Lula teve mais em ' + fInt(mL) + '.');
     k.p((S.uf < 0 ? a.short + ' teve mais votos que Lula em ' + fInt(mA) + ' municípios, e Lula em ' + fInt(mL) + '. ' : '') +
-      'Mas município grande pesa mais que município pequeno: nos lugares onde ' + a.short + ' ficou na frente vivem ' + Math.round(pc(eA, eT)) + ' de cada 100 eleitores.');
+      'Mas município grande pesa mais que município pequeno: nos lugares onde ' + a.short + ' ficou na frente vivem ' + Math.round(pc(eA, eT)) + ' de cada 100 eleitores; onde Lula ficou na frente, ' + Math.round(pc(eL, eT)) + '.');
     k.how('No mapa, cada bolinha é um município e as maiores têm mais eleitores. Azul: ' + a.short + ' na frente. Vermelho: Lula na frente. Quanto mais forte a cor, maior a vantagem.');
     k.more('Explorar o mapa', 'map', () => { S.lens = 'margin'; });
     const cv = el('canvas'); cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Mapa com um ponto por município'); k.vis.append(cv); root.append(k.node);
@@ -853,10 +855,10 @@
       k.big('Em 2022, ' + say(m22, a22) + ' ' + where + '. Em 2026, ' + say(m26, a26) + '.');
       k.p(Math.abs(d) < 0.5 ? 'Ou seja: a disputa quase não mudou de tamanho.' : 'Ou seja: a disputa se moveu ' + nPts(d) + ' na direção de ' + (d > 0 ? a26.name : 'Lula') + '. Isso aconteceu em ' + Math.round(pc(same, n)) + ' de cada 100 municípios.');
       const rows = el('div', 'rows');
-      rows.append(keyRow([['Candidato da família Bolsonaro', 'var(--blue)'], ['Outros', 'var(--other)'], ['Lula', 'var(--red)']]),
+      rows.append(keyRow([[a22.party === a26.party ? 'Candidato do ' + a26.party : a22.name + ' / ' + a26.name, 'var(--blue)'], ['Outros', 'var(--other)'], ['Lula', 'var(--red)']]),
         plainRow('2022', a22.name + ' × Lula', g22, a22.name), plainRow('2026', a26.name + ' × Lula', g26, a26.name));
       k.txt.append(rows);
-      k.how('Os números são a parcela dos votos válidos no primeiro turno. O adversário de Lula não é o mesmo: Jair Bolsonaro em 2022 e Flávio Bolsonaro em 2026.');
+      k.how('Os números são a parcela dos votos válidos no primeiro turno. Lula concorreu nas duas eleições; o outro candidato mais votado mudou: ' + a22.name + ' em 2022 e ' + a26.name + ' em 2026.');
       k.more('Ver a mudança no mapa', 'map', () => { S.lens = 'swing'; });
       root.append(k.node);
     }
@@ -884,25 +886,25 @@
     k = card('Municípios parecidos votam parecido?', true);
     const verdict = el('p', 'big'); k.txt.append(verdict);
     k.p('Para mostrar isso sem fórmulas, dividimos os municípios ' + where + ' em dois grupos com o mesmo número de eleitores e comparamos o voto em cada um.');
-    const traits = [['higher', 'Escolaridade', 'com menos eleitores de ensino superior', 'com mais eleitores de ensino superior'],
+    const traits = [['higher', 'Escolaridade', 'com menos eleitores com ensino superior', 'com mais eleitores com ensino superior'],
       ['old', 'Idade', 'com menos eleitores de 60 anos ou mais', 'com mais eleitores de 60 anos ou mais'], ['size', 'Tamanho do município', 'menores', 'maiores']];
     let shown = 0; const moved = [];
     for (const [key, title, less, more] of traits) {
       const h = halves(key); if (!h) continue; shown++;
       const lo = Math.round(pc(h.lo.a, h.lo.valid)), hi = Math.round(pc(h.hi.a, h.hi.valid)), pair = el('div', 'pair');
       if (Math.abs(hi - lo) >= 3) moved.push(title.toLowerCase());
-      pair.append(el('h3', null, title), el('p', null, lo === hi ? 'Nos dois grupos, ' + a.short + ' teve cerca de ' + hi + ' de cada 100 votos válidos: aqui essa característica quase não faz diferença.'
+      pair.append(el('h3', null, title), el('p', null, lo === hi ? 'Nos dois grupos, ' + a.short + ' teve cerca de ' + hi + ' de cada 100 votos válidos: aqui o resultado quase não muda entre os dois grupos.'
         : 'Nos municípios ' + more + ', ' + a.short + ' teve ' + hi + ' de cada 100 votos válidos. Nos municípios ' + less + ', teve ' + lo + '.'));
       pair.append(plainRow('Municípios ' + less, fInt(h.lo.n) + ' municípios', h.lo), plainRow('Municípios ' + more, fInt(h.hi.n) + ' municípios', h.hi));
       pair.append(el('p', 'how', key === 'size' ? 'A divisão fica em ' + compact(Math.pow(10, h.cut)) + ' eleitores: metade dos eleitores vive em municípios menores que isso.'
         : 'A divisão fica em ' + f1(h.cut) + '% de eleitores ' + (key === 'higher' ? 'com ensino superior' : 'de 60 anos ou mais') + '.'));
       k.txt.append(pair);
     }
-    verdict.textContent = !shown ? 'Nesta seleção não dá para dizer.' : moved.length ? 'Em parte, sim. ' + where[0].toUpperCase() + where.slice(1) + ', o resultado muda conforme ' + list(moved.map(t => t === 'idade' ? 'a idade dos eleitores' : t === 'escolaridade' ? 'a escolaridade' : 'o tamanho do município')) + '.'
+    verdict.textContent = !shown ? 'Nesta seleção não dá para dizer.' : moved.length ? 'Em parte, sim. ' + where[0].toUpperCase() + where.slice(1) + ', o resultado é diferente entre municípios que diferem em ' + list(moved.map(t => t === 'idade' ? 'idade dos eleitores' : t === 'escolaridade' ? 'escolaridade' : 'tamanho')) + '.'
       : 'Aqui, quase não: nos grupos comparados o resultado foi parecido.';
     if (!shown) k.p('Há poucos municípios nesta seleção para fazer a comparação.');
     else k.txt.insertBefore(keyRow([[a.name, 'var(--blue)'], ['Outros', 'var(--other)'], ['Lula', 'var(--red)']]), k.txt.querySelector('.pair'));
-    k.txt.append(el('p', 'warn', 'Cuidado ao interpretar: isto compara municípios, não pessoas. O voto é secreto. Saber que os municípios com mais idosos votaram mais em um candidato não diz como os idosos votaram. Além disso, os municípios diferem em muitas coisas ao mesmo tempo, como renda e região, que também pesam no voto.'));
+    k.txt.append(el('p', 'warn', 'Cuidado ao interpretar: isto compara municípios, não pessoas. O voto é secreto. Saber que os municípios com mais idosos votaram mais em um candidato não diz como os idosos votaram. Além disso, os municípios diferem em muitas coisas ao mesmo tempo, como renda e região, que também podem acompanhar o resultado.'));
     k.more('Ver as relações em detalhe', 'relation');
     root.append(k.node);
 
@@ -910,20 +912,150 @@
     k = card('De onde vêm os números?', true);
     k.p('Os resultados são a contagem oficial do Tribunal Superior Eleitoral (TSE) para presidente, no primeiro turno, município por município. O perfil dos eleitores vem do cadastro eleitoral, também do TSE.');
     k.p('Esta página não é pesquisa de opinião e não estima como cada pessoa ou grupo votou. Ela mostra como votaram os lugares e quem são os eleitores que vivem neles.');
-    k.more('Ver fontes e limites', 'methods');
+    k.p('É um projeto independente, sem ligação com o TSE, com partidos ou com candidatos.');
+    k.more('Ver fontes, créditos e licenças', 'fontes');
+    root.append(k.node);
+
+    k = card('Quer investigar por conta própria?', true);
+    k.big('Os mesmos dados, com todos os gráficos e um roteiro de perguntas para testar.');
+    k.p('Este painel não entrega conclusões prontas. Ele convida você a desconfiar, comparar e procurar o lugar que contraria a regra.');
+    k.more('Abrir o roteiro de exploração', 'roteiro');
     root.append(k.node);
   }
 
-  // ---------------------------------------------------------------- sources
+  // ---------------------------------------------------------------- the invitation
+  const ALL = new Uint8Array(N).fill(1);
+  const rich = (node, text) => { text.split('*').forEach((t, i) => node.append(i % 2 ? el('b', null, t) : document.createTextNode(t))); return node; };   // *bold*
+  const art = k => k === 'size' ? 'o ' : 'a ';
+  function quests() {   // every figure quoted on a card is computed here, for the whole country in 2026
+    const y = Y['2026'], F = y.F, U = y.U, a = y.cand.a, keys = FEATS.map(f => f[0]), out = [];
+    const st = (k, yv, mask, within) => wstats(F[k], yv, mask, within, U.el).r;
+    const both = (yv) => keys.map(k => ({ k, r: st(k, yv, ALL, false), w: st(k, yv, ALL, true) })).filter(d => isFinite(d.r) && isFinite(d.w));
+    const margin = both(F.margin);
+
+    const geo = margin.slice().sort((p, q) => Math.abs(q.r - q.w) - Math.abs(p.r - p.w))[0];
+    out.push({ tag: 'Geografia ou perfil', title: 'O padrão é do eleitorado ou do endereço?', set: { lens: 'margin', x: geo.k }, anchor: 'relation',
+      text: 'Das ' + keys.length + ' características, a que mais muda de figura é ' + art(geo.k) + XPHRASE[geo.k] + '. No país, sua correlação com a margem ' + a.short + ' − Lula é de *' + fmtR(geo.r) + '*. ' +
+        (Math.abs(geo.w) < 0.1 ? 'Quando cada município é comparado só com os da própria UF, ela praticamente desaparece: *'
+          : geo.r * geo.w < 0 ? 'A relação troca de sinal quando cada município é comparado só com os da própria UF: passa a *' : 'Quando cada município é comparado só com os da própria UF, ela passa a *') + fmtR(geo.w) + '*.',
+      test: 'Teste: no ranking, veja em quais características o ponto cheio e o anel mais se afastam.' });
+
+    const masks = REG_NAME.map((_, r) => { const m = new Uint8Array(N); for (let i = 0; i < N; i++) m[i] = UF_REG[UF[i]] === r ? 1 : 0; return m; });
+    const simp = keys.map(k => { const rs = masks.map((m, r) => ({ r, v: st(k, F.margin, m, false) })).filter(d => isFinite(d.v)), lo = d3.least(rs, d => d.v), hi = d3.greatest(rs, d => d.v);
+      return { k, lo, hi, flip: lo.v < 0 && hi.v > 0 ? Math.min(-lo.v, hi.v) : -1, spread: hi.v - lo.v }; }).sort((p, q) => q.flip - p.flip || q.spread - p.spread)[0];
+    out.push({ tag: 'Uma reta não serve para todos', title: 'A relação muda de região para região?', set: { lens: 'margin', x: simp.k }, anchor: 'regioes',
+      text: 'Das ' + keys.length + ' características, a que mais varia entre regiões é ' + art(simp.k) + XPHRASE[simp.k] + ': sua correlação com a margem vai de *' + fmtR(simp.lo.v) + '* ' + IN_REGION[simp.lo.r] + ' a *' + fmtR(simp.hi.v) + '* ' + IN_REGION[simp.hi.r] + '. ' +
+        (simp.flip > 0 ? 'O sinal se inverte.' : 'A força muda bastante.') + ' Uma única reta para o país esconde isso.',
+      test: 'Teste: troque a característica do eixo horizontal e acompanhe os cinco painéis pequenos.' });
+
+    const ahead = v => Math.abs(v) < 0.05 ? 'houve empate' : (v > 0 ? a.short : 'Lula') + ' ficou ' + f1(Math.abs(v)) + pts(v) + ' à frente';
+    const expo = k => { let num = 0, den = 0; for (let i = 0; i < N; i++) { if (!isFinite(F.margin[i])) continue; let v = 0; for (let j = 0; j < 2 * A; j++) v += y.CM[(i * 2 * A + j) * KM + k]; num += v * F.margin[i]; den += v; } return num / den; };
+    out.push({ tag: 'Estado civil', title: 'Casados e solteiros: voto ou endereço?', set: { lens: 'margin', heat: 'marital' }, anchor: 'groups',
+      text: 'Os eleitores casados vivem, em média, em municípios onde *' + ahead(expo(1)) + '*; os solteiros, onde *' + ahead(expo(0)) + '*. Isso mostra onde cada grupo mora, e não como ele votou.',
+      test: 'Teste: na grade, compare as mesmas idades entre os estados civis e depois filtre uma única UF.' });
+
+    const wom = margin.find(d => d.k === 'women'), ufW = y.STATEM.map((m, u) => ({ u, v: m.women })), wLo = d3.least(ufW, d => d.v), wHi = d3.greatest(ufW, d => d.v);
+    out.push({ tag: 'Sexo', title: 'Mais mulheres no eleitorado, outro resultado?', set: { lens: 'margin', x: 'women' }, anchor: 'relation',
+      text: 'Entre as UFs, a proporção de mulheres no eleitorado vai de *' + f1(wLo.v) + '%* ' + IN_UF[D.ufs[wLo.u]] + ' a *' + f1(wHi.v) + '%* ' + IN_UF[D.ufs[wHi.u]] + '. Entre os municípios, sua correlação com a margem é de *' + fmtR(wom.r) + '* no país e de *' + fmtR(wom.w) + '* dentro das UFs.',
+      test: 'Teste: a diferença é de poucos pontos. O que mais muda junto com ela? Fixe um município de cada extremo e compare o resto do perfil.' });
+
+    if (HAS22) {
+      const m22 = Y['2022'].F.margin, a22 = Y['2022'].cand.a, cnt = v => v === 0 ? 'nenhum' : fInt(v); let n = 0, toA = 0, toL = 0, keepA = 0, keepL = 0, elA = 0, elL = 0, elT = 0;
+      for (let i = 0; i < N; i++) {
+        if (!isFinite(m22[i]) || !isFinite(F.margin[i])) continue; n++; elT += U.el[i];
+        if (m22[i] < 0 && F.margin[i] > 0) { toA++; elA += U.el[i]; } else if (m22[i] > 0 && F.margin[i] < 0) { toL++; elL += U.el[i]; } else if (m22[i] > 0 && F.margin[i] > 0) keepA++; else if (m22[i] < 0 && F.margin[i] < 0) keepL++;
+      }
+      const who = a22.party === a.party ? 'o candidato do ' + a.party : a22.name + ' e depois ' + a.name, share = v => v > 0 ? ' (' + f1(pc(v, elT)) + '% do eleitorado)' : '';
+      out.push({ tag: 'Mudança no tempo', title: 'Onde a liderança mudou entre 2022 e 2026?', set: { lens: 'swing' }, anchor: 'map',
+        text: 'Dos ' + fInt(n) + ' municípios com resultado nas duas eleições, Lula ficou à frente nas duas em *' + fInt(keepL) + '* e ' + who + ', em *' + fInt(keepA) + '*. A liderança passou de Lula para ' + a.name + ' em *' + cnt(toA) + '*' + share(elA) +
+          ' e de ' + a22.name + ' para Lula em *' + cnt(toL) + '*' + share(elL) + '.',
+        test: 'Teste: a mudança acompanha as mesmas características que a margem? Lembre que são primeiros turnos com candidatos diferentes.' });
+    }
+
+    const turn = both(F.turnout).sort((p, q) => Math.abs(q.r) - Math.abs(p.r))[0], ufT = y.STATEM.map((m, u) => ({ u, v: m.turnout })), tLo = d3.least(ufT, d => d.v), tHi = d3.greatest(ufT, d => d.v);
+    out.push({ tag: 'Comparecimento', title: 'A abstenção tem endereço e perfil?', set: { lens: 'turnout', x: turn.k }, anchor: 'relation',
+      text: 'Entre as UFs, o comparecimento variou de *' + f1(tLo.v) + '%* ' + IN_UF[D.ufs[tLo.u]] + ' a *' + f1(tHi.v) + '%* ' + IN_UF[D.ufs[tHi.u]] + '. Entre os municípios, o que mais o acompanha é ' + art(turn.k) + XPHRASE[turn.k] + ' (correlação *' + fmtR(turn.r) + '*).',
+      test: 'Teste: o padrão continua dentro das UFs? Lembre que cadastros desatualizados podem inflar a abstenção.' });
+    return out;
+  }
+  function jump(anchor) { requestAnimationFrame(() => { const t = $(anchor); if (t) t.scrollIntoView({ behavior: 'smooth' }); }); }
+  function renderRoteiro() {
+    $('invite-text').textContent = 'Este painel foi feito para provocar quem trabalha com dados. Ele põe lado a lado o resultado oficial e o perfil do eleitorado de ' + fInt(N) + ' municípios' +
+      (HAS22 ? ', em duas eleições,' : '') + ' e deixa as conclusões por conta de quem explora. A proposta é explorar com método: formular uma hipótese, procurar o padrão, tentar derrubá-lo e só então confiar um pouco nele.';
+    const steps = [['Pergunte', 'Comece por uma hipótese que possa estar errada. As investigações abaixo sugerem algumas.'],
+      ['Observe', 'Procure o padrão no mapa e na dispersão antes de olhar qualquer coeficiente.', 'Ir ao mapa', 'map'],
+      ['Compare', 'Mude a região, a UF, o porte e a eleição. O padrão resiste ou era só daquele recorte?'],
+      ['Controle', 'Compare cada município com os da própria UF e mantenha as outras características constantes.', 'Ir às relações', 'relation'],
+      ['Duvide', 'Leia os cuidados antes de concluir e procure o município que contraria a regra.', 'Antes de concluir', 'methods']];
+    const method = $('method'); method.replaceChildren();
+    for (const [verb, text, label, anchor] of steps) {
+      const li = el('li'); li.append(el('b', null, verb), el('span', null, text));
+      if (label) { const b = el('button', 'link', label + ' →'); b.type = 'button'; b.addEventListener('click', () => jump(anchor)); li.append(b); }
+      method.append(li);
+    }
+    const list = quests(), node = $('quests'); node.replaceChildren();
+    $('quests-title').textContent = (['Uma', 'Duas', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete'][list.length - 1] || list.length) + ' investigações para começar';
+    for (const q of list) {
+      const c = el('article', 'quest'), b = el('button', 'go', 'Investigar →'); b.type = 'button';
+      b.addEventListener('click', () => { Object.assign(S, { year: '2026', region: -1, uf: -1, size: 'all' }, q.set); update(); jump(q.anchor); });
+      c.append(el('span', 'mono', q.tag), el('h3', null, q.title), rich(el('p'), q.text), el('p', 'try', q.test), b); node.append(c);
+    }
+    const box = $('roteiro');
+    try { if (localStorage.getItem('eeb-roteiro') === '0') box.open = false; } catch (e) { /* stays open */ }
+    box.addEventListener('toggle', () => { try { localStorage.setItem('eeb-roteiro', box.open ? '1' : '0'); } catch (e) { /* convenience only */ } });
+  }
+
+  // ---------------------------------------------------------------- cautions, sources, credits
+  const ext = (text, href) => { const a = el('a', null, text); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
   function renderMethods() {
-    const node = $('methods-body'), y26 = P.meta.y['2026'], y22 = HAS22 ? P.meta.y['2022'] : null;
+    const cautions = $('cautions'); cautions.replaceChildren();
+    const el26 = Y['2026'].U.el, top100 = pc(d3.sum(ORDER.slice(0, 100), i => el26[i]), d3.sum(el26));
+    [['Lugares não são pessoas.', 'Tudo aqui compara municípios. Nenhuma figura diz como votou um grupo de eleitores (falácia ecológica). Para isso seriam necessárias pesquisas com indivíduos.'],
+      ['Correlação não é causa.', 'Uma característica pode acompanhar o voto apenas porque anda junto com outra, medida ou não pelo painel.'],
+      ['Faltam variáveis importantes.', 'O cadastro eleitoral não traz renda, religião nem ocupação, e a cor ou raça está registrada para poucos eleitores. A influência delas, se existe, aparece aqui misturada à das características disponíveis.'],
+      ['Quem procura, acha.', 'São ' + FEATS.length + ' características, ' + (VOTE_KEYS.length + CHANGE_KEYS.length) + ' indicadores, ' + YEARS.length + ' eleições e dezenas de recortes. Com tantas combinações, algumas relações aparentes surgem por coincidência, sobretudo em recortes pequenos. Trate cada achado como hipótese e tente derrubá-lo em outro recorte' + (HAS22 ? ' ou na outra eleição.' : '.')],
+      ['Vizinhos se parecem.', 'Municípios próximos não são observações independentes. Por isso o painel não mostra valores-p nem intervalos de confiança: calculados da forma usual, pareceriam mais seguros do que são.'],
+      ['O cadastro envelhece.', 'Estado civil e escolaridade são os declarados no alistamento e podem estar desatualizados. O perfil descreve todos os eleitores aptos, e não apenas quem compareceu.'],
+      HAS22 ? ['Duas eleições, candidatos diferentes.', 'Lula concorreu nas duas; o outro candidato mais votado foi ' + Y['2022'].cand.a.name + ' em 2022 e ' + Y['2026'].cand.a.name + ' em 2026. Parte da mudança pode vir da troca de candidato, e não do eleitorado. E tudo aqui é primeiro turno, com um conjunto diferente de concorrentes em cada ano.']
+        : ['Um turno, uma eleição.', 'Tudo aqui é o primeiro turno de uma única eleição, com os concorrentes daquele ano.'],
+      ['Modelos simplificam, e os pesos concentram.', 'As retas e a regressão supõem relações lineares: curvas, limiares e interações ficam de fora. Como cada município pesa conforme o seu eleitorado, poucas cidades grandes dominam as contas: as 100 maiores somam ' + Math.round(top100) + '% do peso. Em UFs concentradas na capital, o número reflete quase só a capital contra o resto.']]
+      .forEach(([title, text]) => { const li = el('li'); li.append(el('b', null, title), el('span', null, text)); cautions.append(li); });
+
+    const node = $('methods-body'), y26 = P.meta.y['2026'], y22 = HAS22 ? P.meta.y['2022'] : null; node.replaceChildren();
     const item = (title, body) => { const d = el('div'); d.append(el('h3', null, title), el('p', null, body)); node.append(d); };
     item('Resultados', 'Totalização oficial do primeiro turno para presidente. 2026: serviço de divulgação de resultados do TSE, um arquivo por município, contagem final gerada em ' + y26.result_date + '.' +
-      (y22 ? ' 2022: dados abertos do TSE (votação nominal e detalhe da apuração por município e zona), gerados em ' + y22.result_date + '.' : ''));
-    item('Perfil do eleitorado', 'Dados abertos do TSE, perfil do eleitorado, somado das zonas eleitorais para os municípios. Extração de ' + y26.profile_date + ' para 2026' + (y22 ? ' e de ' + y22.profile_date + ' para 2022' : '') + '.');
+      (y22 ? ' 2022: dados abertos do TSE (votação nominal e detalhe da apuração por município e zona), na versão do arquivo gerada pelo TSE em ' + y22.result_date + '.' : ''));
+    item('Perfil do eleitorado', 'Dados abertos do TSE, perfil do eleitorado, agregado por município a partir das zonas eleitorais. Extração de ' + y26.profile_date + ' para 2026' + (y22 ? ' e de ' + y22.profile_date + ' para 2022' : '') + '.');
     item('O que fica de fora', 'Eleitores sem sexo, idade, estado civil ou escolaridade informados (menos de 0,1%). Votos no exterior entram apenas no resumo nacional. Cor ou raça não é analisada: só ' + f1(y26.race_declared) + '% dos eleitores a têm registrada em 2026.');
-    if (y22) item('Comparação entre 2022 e 2026', 'Os municípios são pareados pelo código do TSE. Município criado depois de 2022 fica sem valor naquele ano. A mudança da margem compara o candidato da família Bolsonaro em cada eleição (Jair em 2022, Flávio em 2026) com Lula.');
+    if (y22) item('Comparação entre 2022 e 2026', 'Os municípios são pareados pelo código do TSE. Município criado depois de 2022 fica sem valor naquele ano. A mudança da margem compara o candidato do PL em cada eleição (Jair Bolsonaro em 2022, Flávio Bolsonaro em 2026) com Lula.');
     item('Como ler as relações', 'Correlações, retas e o modelo ponderam cada município pelo seu eleitorado. Comparam lugares, e por isso não permitem dizer como um grupo de pessoas votou.');
+    item('Atualização', 'Os números refletem os arquivos do TSE nas datas indicadas. Retotalizações e decisões judiciais posteriores podem alterar os totais oficiais. Em caso de divergência, vale o que o TSE publica.');
+
+    const credits = $('credits'); credits.replaceChildren();
+    const row = (what, source, licence) => { const d = el('div'), dd = el('dd'); for (const part of source) dd.append(part); d.append(el('dt', null, what), dd, el('dd', 'lic', licence)); credits.append(d); };
+    row('Resultados de 2022 e perfil do eleitorado', ['Tribunal Superior Eleitoral (TSE), ', ext('Portal de Dados Abertos', 'https://dadosabertos.tse.jus.br/')], 'Creative Commons Atribuição (CC BY), como indicado no portal');
+    row('Resultados de 2026', ['Tribunal Superior Eleitoral (TSE), ', ext('divulgação de resultados', 'https://resultados.tse.jus.br/')], 'Dados públicos oficiais, citados com atribuição ao TSE');
+    row('Coordenadas dos municípios', [ext('kelvins/municipios-brasileiros', 'https://github.com/kelvins/municipios-brasileiros')], 'MIT · © 2016 Kelvin S. do Prado');
+    row('Contornos das UFs', ['Malha municipal do IBGE, via ', ext('tbrugz/geodata-br', 'https://github.com/tbrugz/geodata-br'), ', agregada por UF e simplificada'], 'CC0 1.0 no repositório · fonte dos dados: IBGE');
+    row('Gráficos', [ext('D3', 'https://d3js.org/'), ' versão ' + d3.version + ', incluída na página'], 'ISC · © 2010–2023 Mike Bostock');
+    row('Tipografia', ['Archivo (Omnibus-Type), Public Sans (USWDS) e IBM Plex Mono (IBM), servidas pelo Google Fonts'], 'SIL Open Font License 1.1');
+    row('Este painel', ['Código, textos e figuras' + (SITE.author ? ' de ' + SITE.author : '')].concat(SITE.repo ? [': ', ext(SITE.repo.replace(/^https?:\/\//, ''), SITE.repo)] : []), 'Código: MIT · Textos e figuras: CC BY 4.0');
+    $('notices-text').textContent = document.getElementById('notices').textContent.trim();
+
+    $('independence').textContent = 'Projeto independente, sem vínculo com o TSE, com partidos, candidatos ou campanhas. Usa apenas resultados oficiais e dados públicos. Não é pesquisa eleitoral nem enquete: não coleta opiniões e não estima intenção de voto. ' +
+      'Azul e vermelho são uma convenção visual para distinguir os dois candidatos mais votados, e não uma posição. As análises e interpretações são de responsabilidade de quem as faz, e não do TSE.';
+    $('privacy').textContent = 'Privacidade: a página não usa cookies nem ferramentas de medição de audiência. Guarda apenas, no seu navegador, duas preferências de exibição. Os dados são contagens por município, como publicadas pelo TSE, sem nomes nem registros individuais. ' +
+      'As únicas requisições externas são as das tipografias, feitas aos servidores do Google Fonts, que recebem o endereço IP e a identificação do navegador de quem abre a página, assim como o serviço que a hospeda.';
+    const now = new Date(), month = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'][now.getMonth()], span = YEARS.slice().sort().join(' e ');
+    $('cite').textContent = (SITE.author ? SITE.author + '. ' : '') + 'Explorador do Eleitorado Brasileiro: primeiro turno das eleições presidenciais de ' + span + '. ' + YEARS.slice().sort().pop() + '. Dados: Tribunal Superior Eleitoral (TSE).' +
+      (SITE.site ? ' Disponível em: ' + SITE.site + '.' : '') + ' Acesso em: ' + now.getDate() + ' ' + month + ' ' + now.getFullYear() + '.';
+  }
+  function renderFoot() {
+    const foot = $('foot'), more = el('button', 'link', 'Fontes, créditos e licenças'), second = el('p'); more.type = 'button';
+    more.addEventListener('click', () => setView('full', 'creditos'));
+    second.append('Projeto independente, sem vínculo com o TSE, partidos ou candidatos. Não é pesquisa eleitoral. ', more);
+    if (SITE.repo) second.append(' · ', ext('Código-fonte', SITE.repo));
+    foot.replaceChildren(el('p', null, 'Dados: Tribunal Superior Eleitoral (TSE), dados abertos (Creative Commons Atribuição) e divulgação de resultados. Primeiro turno para presidente, ' + YEARS.slice().sort().join(' e ') + '. Contornos das UFs: IBGE.'), second);
   }
 
   // ---------------------------------------------------------------- orchestration
@@ -938,15 +1070,17 @@
     S.view = view; if (view === 'simple') S.size = 'all';
     try { localStorage.setItem('eeb-view', view); } catch (e) { /* storage is a convenience only */ }
     if (!quiet) update();
-    if (anchor) requestAnimationFrame(() => { const t = $(anchor); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
+    if (anchor === 'roteiro') $('roteiro').open = true;
+    if (anchor) jump(anchor);
   }
   try { const saved = localStorage.getItem('eeb-view'); if (saved === 'full' || saved === 'simple') S.view = saved; } catch (e) { /* default view */ }
-  if (location.hash === '#explorar') S.view = 'full'; else if (location.hash === '#leitura') S.view = 'simple';
-  $('foot').textContent = 'Dados: Tribunal Superior Eleitoral (TSE), divulgação de resultados e dados abertos. Primeiro turno para presidente, ' + YEARS.slice().reverse().join(' e ') + '.';
-  initControls(); renderMethods();
+  const HASH = { '#explorar': null, '#roteiro': 'roteiro', '#cuidados': 'methods', '#fontes': 'fontes', '#creditos': 'creditos' }, hashed = location.hash in HASH;
+  if (hashed) S.view = 'full'; else if (location.hash === '#leitura') S.view = 'simple';
+  initControls(); renderRoteiro(); renderMethods(); renderFoot();
   hoverLayer($('cv-map'), () => MAPPTS);
   hoverLayer($('cv-sc'), () => SCPTS, i => [[FLABEL[S.x], fmtFeat(S.x, cur().F[S.x][i])]]);
   update();
+  if (hashed && HASH[location.hash]) setView('full', HASH[location.hash], true);
   let raf = 0, lastW = document.documentElement.clientWidth;
   new ResizeObserver(() => { const w = document.documentElement.clientWidth; if (w === lastW) return; lastW = w; cancelAnimationFrame(raf); raf = requestAnimationFrame(redraw); }).observe(document.documentElement);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
